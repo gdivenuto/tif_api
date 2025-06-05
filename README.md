@@ -1,7 +1,6 @@
 
-# API para el uso de un Modelo de Aprendizaje Supervisado
+# API para la creación y uso de un Modelo de Aprendizaje Supervisado para el TIF
 
-## Pasos para crear un entorno virtual para el proyecto del Modelo de AAS del TIF
 ### Creación del directorio
 mkdir tif_api
 
