@@ -1,5 +1,5 @@
 
-# API para la creación y uso de un Modelo de Aprendizaje Supervisado para el TIF
+# API para la creación y uso de Modelos de Aprendizaje Supervisado para el TIF
 
 ### Creación del directorio
 mkdir tif_api
@@ -31,15 +31,21 @@ tif_api/
 
 ├── venv/                  # entorno virtual
 
-├── main.py                # API con diversos endpoints para la utilización del modelo, para su desarrollo se utilizó FastAPI
+├── main.py                # API con diversos endpoints para la utilización de los modelos, para su desarrollo se utilizó FastAPI
 
 ├── db.py                  # Método que retorna la conexión a la base de datos MySQL del TIF
 
-├── model_utils.py         # Métodos para el entrenamiento y diferentes predicciones con dicho modelo creado
+├── model_utils.py         # Métodos para crear, entrenar y usar diferentes modelos, para realizar predicciones.
 
 ├── modelos/
 
---└── modelo.pkl           # Archivo que contiene el modelo guardado
+--└── modelo.pkl                     # Archivo que contiene el modelo guardado de Regresión Lineal
+
+--└── modelo_logistica.pkl           # Archivo que contiene el modelo guardado de Regresión Logística
+
+--└── modelo_con_arbol.pkl           # Archivo que contiene el modelo guardado de Arbol de Decisión
+
+--└── modelo_con_bosque.pkl          # Archivo que contiene el modelo guardado de Bosques Aleatorios
 
 └── requirements.txt       # dependencias del proyecto para el modelo
 
