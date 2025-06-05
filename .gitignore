@@ -1,3 +1,40 @@
+# Entorno virtual de Python
+venv/
+ENV/
 env/
+.venv/
+
+# Archivos de caché de Python
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyo
+*.pyd
+*.pkl
+*.joblib
+
+# Paquetes instalados y metadatos
+*.egg-info/
+*.eggs/
+*.whl
+dist/
+build/
+
+# Archivos sensibles
+.env
+*.db
+*.sqlite3
+*.log
+
+# Modelos entrenados
+modelos/*.pkl
+modelos/*.joblib
+
+# Archivos del sistema o editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# ⚙️ Archivos temporales o backup
+*.bak
+*.tmp
