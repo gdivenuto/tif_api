@@ -26,6 +26,9 @@ pip install -r requirements.txt
 ### Verificar la instalación
 uvicorn main:app --reload
 
+### Crear el directorio donde se guardarán los modelos entrenados
+mkdir modelos
+
 ### Resultado de la estructura del proyecto, con los diferentes archivos necesarios para el proyecto del Modelo de AAS del TIF:
 tif_api/
 

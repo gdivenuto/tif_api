@@ -33,7 +33,7 @@ def obtener_datos_para_entrenamiento():
     conn.close()
     return datos
 
-def entrenar_y_guardar_modelo():
+def entrenar_modelo_regresion_lineal():
     datos = obtener_datos_para_entrenamiento()
     df = pd.DataFrame(datos)
 
@@ -46,10 +46,10 @@ def entrenar_y_guardar_modelo():
     modelo = LinearRegression()
     modelo.fit(X, y)
 
-    joblib.dump(modelo, 'modelos/modelo.pkl')
-    print("Modelo entrenado y guardado en modelos/modelo.pkl")
+    joblib.dump(modelo, 'modelos/modelo_lineal.pkl')
+    print("Modelo entrenado y guardado en modelos/modelo_lineal.pkl")
 
-def entrenar_logistica():
+def entrenar_modelo_regresion_logistica():
     conn = conectar_db()
     query = """
         SELECT 
@@ -87,7 +87,7 @@ def entrenar_logistica():
 
     return {"mensaje": "Modelo de clasificación entrenado y guardado correctamente."}
 
-def entrenar_modelo_arbol():
+def entrenar_modelo_arbol_decision():
     conn = conectar_db()
     query = """
         SELECT 
@@ -120,7 +120,7 @@ def entrenar_modelo_arbol():
 
     return {"mensaje": "Modelo de árbol entrenado y guardado correctamente."}
 
-def entrenar_modelo_bosque():
+def entrenar_modelo_bosque_aleatorio():
     conn = conectar_db()
     query = """
         SELECT 
@@ -153,13 +153,13 @@ def entrenar_modelo_bosque():
 
     return {"mensaje": "Modelo de bosque entrenado y guardado correctamente."}
 
-def predecir_con_modelo(edad, cantidad_total_pedidos, dias_desde_ultima_compra, total_gastado):
-    modelo = joblib.load('modelos/modelo.pkl')
+def predecir_con_modelo_lineal(edad, cantidad_total_pedidos, dias_desde_ultima_compra, total_gastado):
+    modelo = joblib.load('modelos/modelo_lineal.pkl')
 
     features = [[edad, cantidad_total_pedidos, dias_desde_ultima_compra, total_gastado]]
     prediccion = modelo.predict(features)
 
-    return float(prediccion[0])
+    return {"valor_estimado": float(prediccion[0])}
 
 def predecir_por_cliente_id(cliente_id: int):
     conn = conectar_db()
@@ -186,7 +186,7 @@ def predecir_por_cliente_id(cliente_id: int):
     if not row:
         raise HTTPException(status_code=404, detail="Cliente no encontrado o sin datos suficientes")
 
-    resultado = predecir_con_modelo(
+    resultado = predecir_con_modelo_lineal(
         int(row['edad']),
         int(row['cantidad_total_pedidos']),
         int(row['dias_desde_ultima_compra']),
@@ -198,7 +198,7 @@ def predecir_por_cliente_id(cliente_id: int):
         "resultado": round(resultado, 2)
     }
 
-def predecir_logistico(edad, cantidad_total_pedidos, dias_desde_ultima_compra, total_gastado):
+def predecir_con_modelo_logistico(edad, cantidad_total_pedidos, dias_desde_ultima_compra, total_gastado):
     modelo_path = "modelos/modelo_logistico.pkl"
     if not os.path.exists(modelo_path):
         raise FileNotFoundError("El modelo de clasificación no está entrenado.")
@@ -215,7 +215,7 @@ def predecir_logistico(edad, cantidad_total_pedidos, dias_desde_ultima_compra, t
         "probabilidad": round(prob, 2)
     }
 
-def predecir_con_arbol(edad, cantidad_total_pedidos, dias_desde_ultima_compra, total_gastado):
+def predecir_con_modelo_arbol(edad, cantidad_total_pedidos, dias_desde_ultima_compra, total_gastado):
     modelo_path = "modelos/modelo_arbol.pkl"
     if not os.path.exists(modelo_path):
         raise FileNotFoundError("El modelo de árbol no está entrenado.")
@@ -231,7 +231,7 @@ def predecir_con_arbol(edad, cantidad_total_pedidos, dias_desde_ultima_compra, t
         "probabilidad": round(prob, 2) if prob is not None else "no disponible"
     }
 
-def predecir_con_bosque(edad, cantidad_total_pedidos, dias_desde_ultima_compra, total_gastado):
+def predecir_con_modelo_bosque(edad, cantidad_total_pedidos, dias_desde_ultima_compra, total_gastado):
     modelo_path = "modelos/modelo_bosque.pkl"
     if not os.path.exists(modelo_path):
         raise FileNotFoundError("El modelo de bosque no está entrenado.")
@@ -246,3 +246,22 @@ def predecir_con_bosque(edad, cantidad_total_pedidos, dias_desde_ultima_compra, 
         "volvera_comprar": bool(pred),
         "probabilidad": round(prob, 2)
     }
+
+def obtener_clientes_para_proyeccion():
+    conn = conectar_db()
+    query = """
+        SELECT 
+            c.id AS id,
+            CONCAT(c.nombre, ' ', c.apellido) AS nombre,
+            c.edad,
+            COUNT(DISTINCT p.id) AS pedidos,
+            DATEDIFF(CURDATE(), MAX(p.fecha)) AS dias,
+            SUM(dp.cantidad * dp.precio_unitario - dp.descuento) AS gastado
+        FROM clientes c
+        JOIN pedidos p ON c.id = p.cliente_id
+        JOIN detalle_pedido dp ON p.id = dp.pedido_id
+        GROUP BY c.id, c.nombre, c.apellido, c.edad
+    """
+    df = pd.read_sql(query, conn)
+    conn.close()
+    return df.to_dict(orient="records")

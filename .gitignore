@@ -35,6 +35,6 @@ Thumbs.db
 .idea/
 .vscode/
 
-# ⚙️ Archivos temporales o backup
+# Archivos temporales o backup
 *.bak
 *.tmp
