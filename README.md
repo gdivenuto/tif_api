@@ -6,10 +6,22 @@ mkdir tif_api
 
 cd tif_api
 
+### Si no se encuentra instalado Python aún
+#### Actualizar primero la lista de paquetes disponibles en los repositorios del sistema
+sudo apt update
+#### Instalar Python
+sudo apt install python3
+#### Verificar si se ha instalado y su versión
+python -V
+
+python --version
+
 ### Creación del entorno virtual
 python3 -m venv venv
 
 Esto creará una carpeta venv/ dentro del proyecto con una instalación aislada de Python.
+
+La bandera -m ejecuta el módulo de Python como un script.
 
 ### Activar el entorno virtual
 source venv/bin/activate
@@ -22,6 +34,10 @@ Es recomendable contar con un archivo de texto, requirements.txt, que contenga e
 Para instalarlas se debe ejecutar:
 
 pip install -r requirements.txt
+
+pip es un sistema de gestión de paquetes, Python 3 ya lo incluye.
+
+La bandera -r permite leer e instalar paquetes desde el archivo requirements.txt
 
 ### Iniciar el servidor para verificar la instalación
 uvicorn main:app --reload
