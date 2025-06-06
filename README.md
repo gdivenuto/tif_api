@@ -23,7 +23,7 @@ Para instalarlas se debe ejecutar:
 
 pip install -r requirements.txt
 
-### Verificar la instalación
+### Iniciar el servidor para verificar la instalación
 uvicorn main:app --reload
 
 ### Crear el directorio donde se guardarán los modelos entrenados
@@ -51,6 +51,15 @@ tif_api/
 --└── modelo_con_bosque.pkl          # Archivo que contiene el modelo guardado de Bosques Aleatorios
 
 └── requirements.txt       # dependencias del proyecto para el modelo
+
+## Importante, al iniciar la API
+### Primero se debe activar el entorno virtual
+source venv/bin/activate
+
+Se verá en la terminal: (venv) (base) thor@thor-desktop:/var/www/html/tif_api$
+
+### Luego iniciar el servidor, se utiliza --reload para que tome los cambios en la API
+uvicorn main:app --reload
 
 ### Acceso a la documentación interactiva generada por FastAPI:
 http://127.0.0.1:8000/docs     ← Swagger UI
