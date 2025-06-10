@@ -4,6 +4,11 @@ from model_utils import entrenar_modelo_regresion_lineal, entrenar_modelo_regres
 from model_utils import predecir_por_cliente_id, predecir_con_modelo_lineal, predecir_con_modelo_logistico, predecir_con_modelo_arbol, predecir_con_modelo_bosque
 from model_utils import obtener_clientes_para_proyeccion
 from pydantic import BaseModel
+from typing import Optional
+
+class RangoEntrenamiento(BaseModel):
+    date_from: Optional[str]  # ISO 'YYYY-MM-DD'
+    date_to:   Optional[str]
 
 class DatosEntrada(BaseModel):
     edad: int
@@ -25,22 +30,21 @@ app.add_middleware(
 def inicio():
     return {"mensaje": "API de predicci\u00f3n activa"}
 
-@app.get("/entrenar_lineal")
-def entrenar_lineal():
-    entrenar_modelo_regresion_lineal()
-    return {"mensaje": "Modelo entrenado y guardado"}
+@app.post("/entrenar_lineal")
+def entrenar_lineal(rango: RangoEntrenamiento):
+    return entrenar_modelo_regresion_lineal(rango.date_from, rango.date_to)
 
-@app.get("/entrenar_logistica")
-def entrenar_logistica_endpoint():
-    return entrenar_modelo_regresion_logistica()
+@app.post("/entrenar_logistico")
+def entrenar_logistico(rango: RangoEntrenamiento):
+    return entrenar_modelo_regresion_logistica(rango.date_from, rango.date_to)
 
-@app.get("/entrenar_arbol")
-def entrenar_arbol():
-    return entrenar_modelo_arbol_decision()
+@app.post("/entrenar_arbol")
+def entrenar_arbol(rango: RangoEntrenamiento):
+    return entrenar_modelo_arbol_decision(rango.date_from, rango.date_to)
 
-@app.get("/entrenar_bosque")
-def entrenar_bosque():
-    return entrenar_modelo_bosque_aleatorio()
+@app.post("/entrenar_bosque")
+def entrenar_bosque(rango: RangoEntrenamiento):
+    return entrenar_modelo_bosque_aleatorio(rango.date_from, rango.date_to)
 
 @app.get("/predecir_por_cliente/{cliente_id}")
 def predecir_por_cliente(cliente_id: int):

@@ -33,7 +33,37 @@ def obtener_datos_para_entrenamiento():
     conn.close()
     return datos
 
-def entrenar_modelo_regresion_lineal():
+def _get_info_por_rango(date_from: str = None, date_to: str = None) -> tuple[str, tuple]:
+    filtro = []
+    params = []
+
+    if date_from:
+        filtro.append("p.fecha >= %s")
+        params.append(date_from)
+    if date_to:
+        filtro.append("p.fecha <= %s")
+        params.append(date_to)
+
+    where = ""
+    if filtro:
+        where = "WHERE " + " AND ".join(filtro)
+
+    sql = f"""
+    SELECT 
+        c.id AS cliente_id,
+        c.edad,
+        COUNT(DISTINCT p.id) AS cantidad_total_pedidos,
+        DATEDIFF(CURDATE(), MAX(p.fecha)) AS dias_desde_ultima_compra,
+        SUM(dp.cantidad * dp.precio_unitario - dp.descuento) AS total_gastado
+    FROM clientes c
+    JOIN pedidos p ON c.id = p.cliente_id
+    JOIN detalle_pedido dp ON p.id = dp.pedido_id
+    {where}
+    GROUP BY c.id, c.edad
+    """
+    return sql, tuple(params)
+
+def entrenar_modelo_regresion_lineal_old():
     datos = obtener_datos_para_entrenamiento()
     df = pd.DataFrame(datos)
 
@@ -49,24 +79,38 @@ def entrenar_modelo_regresion_lineal():
     joblib.dump(modelo, 'modelos/modelo_lineal.pkl')
     print("Modelo entrenado y guardado en modelos/modelo_lineal.pkl")
 
-def entrenar_modelo_regresion_logistica():
+def entrenar_modelo_regresion_lineal(date_from=None, date_to=None):
     conn = conectar_db()
-    query = """
-        SELECT 
-            c.id AS cliente_id,
-            c.edad,
-            COUNT(DISTINCT p.id) AS cantidad_total_pedidos,
-            DATEDIFF(CURDATE(), MAX(p.fecha)) AS dias_desde_ultima_compra,
-            SUM(dp.cantidad * dp.precio_unitario - dp.descuento) AS total_gastado
-        FROM clientes c
-        JOIN pedidos p ON c.id = p.cliente_id
-        JOIN detalle_pedido dp ON p.id = dp.pedido_id
-        GROUP BY c.id, c.edad
-    """
-    df = pd.read_sql(query, conn)
+    sql, params = _get_info_por_rango(date_from, date_to)
+    df = pd.read_sql(sql, conn, params=params)
     conn.close()
 
-    # Simulamos columna binaria (por ejemplo: compró hace menos de 60 días)
+    df["volvera_comprar"] = df["dias_desde_ultima_compra"].apply(lambda x: 1 if x < 60 else 0)
+
+    X = df[['edad', 'cantidad_total_pedidos', 'dias_desde_ultima_compra', 'total_gastado']]
+    y = df['volvera_comprar']
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    modelo = LinearRegression()
+    modelo.fit(X_train, y_train)
+
+    y_pred = modelo.predict(X_test)
+    print(classification_report(y_test, y_pred))
+
+    os.makedirs("modelos", exist_ok=True)
+    with open("modelos/modelo_logistico.pkl", "wb") as f:
+        pickle.dump(modelo, f)
+
+    return {"mensaje": "Modelo de clasificación entrenado y guardado correctamente."}
+
+def entrenar_modelo_regresion_logistica(date_from=None, date_to=None):
+    conn = conectar_db()
+    sql, params = _get_info_por_rango(date_from, date_to)
+    df = pd.read_sql(sql, conn, params=params)
+    conn.close()
+
+    # Se simula una columna binaria (por ejemplo: compró hace menos de 60 días o no)
     df["volvera_comprar"] = df["dias_desde_ultima_compra"].apply(lambda x: 1 if x < 60 else 0)
 
     X = df[['edad', 'cantidad_total_pedidos', 'dias_desde_ultima_compra', 'total_gastado']]
@@ -80,28 +124,16 @@ def entrenar_modelo_regresion_logistica():
     y_pred = modelo.predict(X_test)
     print(classification_report(y_test, y_pred))
 
-    # Guardar modelo
     os.makedirs("modelos", exist_ok=True)
     with open("modelos/modelo_logistico.pkl", "wb") as f:
         pickle.dump(modelo, f)
 
     return {"mensaje": "Modelo de clasificación entrenado y guardado correctamente."}
 
-def entrenar_modelo_arbol_decision():
+def entrenar_modelo_arbol_decision(date_from=None, date_to=None):
     conn = conectar_db()
-    query = """
-        SELECT 
-            c.id AS cliente_id,
-            c.edad,
-            COUNT(DISTINCT p.id) AS cantidad_total_pedidos,
-            DATEDIFF(CURDATE(), MAX(p.fecha)) AS dias_desde_ultima_compra,
-            SUM(dp.cantidad * dp.precio_unitario - dp.descuento) AS total_gastado
-        FROM clientes c
-        JOIN pedidos p ON c.id = p.cliente_id
-        JOIN detalle_pedido dp ON p.id = dp.pedido_id
-        GROUP BY c.id, c.edad
-    """
-    df = pd.read_sql(query, conn)
+    sql, params = _get_info_por_rango(date_from, date_to)
+    df = pd.read_sql(sql, conn, params=params)
     conn.close()
 
     df["volvera_comprar"] = df["dias_desde_ultima_compra"].apply(lambda x: 1 if x < 60 else 0)
@@ -120,21 +152,10 @@ def entrenar_modelo_arbol_decision():
 
     return {"mensaje": "Modelo de árbol entrenado y guardado correctamente."}
 
-def entrenar_modelo_bosque_aleatorio():
+def entrenar_modelo_bosque_aleatorio(date_from=None, date_to=None):
     conn = conectar_db()
-    query = """
-        SELECT 
-            c.id AS cliente_id,
-            c.edad,
-            COUNT(DISTINCT p.id) AS cantidad_total_pedidos,
-            DATEDIFF(CURDATE(), MAX(p.fecha)) AS dias_desde_ultima_compra,
-            SUM(dp.cantidad * dp.precio_unitario - dp.descuento) AS total_gastado
-        FROM clientes c
-        JOIN pedidos p ON c.id = p.cliente_id
-        JOIN detalle_pedido dp ON p.id = dp.pedido_id
-        GROUP BY c.id, c.edad
-    """
-    df = pd.read_sql(query, conn)
+    sql, params = _get_info_por_rango(date_from, date_to)
+    df = pd.read_sql(sql, conn, params=params)
     conn.close()
 
     df["volvera_comprar"] = df["dias_desde_ultima_compra"].apply(lambda x: 1 if x < 60 else 0)
