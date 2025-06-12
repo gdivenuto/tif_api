@@ -2,10 +2,11 @@ import pandas as pd
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import root_mean_squared_error, r2_score, classification_report
+from sqlalchemy import text
 from db import conectar_db
 from fastapi import HTTPException
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report
 import joblib
 import pickle
 import os
@@ -80,10 +81,9 @@ def entrenar_modelo_regresion_lineal_old():
     print("Modelo entrenado y guardado en modelos/modelo_lineal.pkl")
 
 def entrenar_modelo_regresion_lineal(date_from=None, date_to=None):
-    conn = conectar_db()
+    engine = conectar_db()
     sql, params = _get_info_por_rango(date_from, date_to)
-    df = pd.read_sql(sql, conn, params=params)
-    conn.close()
+    df = pd.read_sql(sql, con=engine, params=params)
 
     df["volvera_comprar"] = df["dias_desde_ultima_compra"].apply(lambda x: 1 if x < 60 else 0)
 
@@ -96,19 +96,19 @@ def entrenar_modelo_regresion_lineal(date_from=None, date_to=None):
     modelo.fit(X_train, y_train)
 
     y_pred = modelo.predict(X_test)
-    print(classification_report(y_test, y_pred))
+    print(f"R2: {r2_score(y_test, y_pred):.3f}") # puntuación de regresión
+    print(f"RMSE: {root_mean_squared_error(y_test, y_pred):.3f}") # raíz del error cuadrático medio
 
     os.makedirs("modelos", exist_ok=True)
-    with open("modelos/modelo_logistico.pkl", "wb") as f:
+    with open("modelos/modelo_lineal.pkl", "wb") as f:
         pickle.dump(modelo, f)
 
-    return {"mensaje": "Modelo de clasificación entrenado y guardado correctamente."}
+    return {"mensaje": "Modelo lineal entrenado y guardado correctamente."}
 
 def entrenar_modelo_regresion_logistica(date_from=None, date_to=None):
-    conn = conectar_db()
+    engine = conectar_db()
     sql, params = _get_info_por_rango(date_from, date_to)
-    df = pd.read_sql(sql, conn, params=params)
-    conn.close()
+    df = pd.read_sql(sql, con=engine, params=params)
 
     # Se simula una columna binaria (por ejemplo: compró hace menos de 60 días o no)
     df["volvera_comprar"] = df["dias_desde_ultima_compra"].apply(lambda x: 1 if x < 60 else 0)
@@ -131,10 +131,9 @@ def entrenar_modelo_regresion_logistica(date_from=None, date_to=None):
     return {"mensaje": "Modelo de clasificación entrenado y guardado correctamente."}
 
 def entrenar_modelo_arbol_decision(date_from=None, date_to=None):
-    conn = conectar_db()
+    engine = conectar_db()
     sql, params = _get_info_por_rango(date_from, date_to)
-    df = pd.read_sql(sql, conn, params=params)
-    conn.close()
+    df = pd.read_sql(sql, con=engine, params=params)
 
     df["volvera_comprar"] = df["dias_desde_ultima_compra"].apply(lambda x: 1 if x < 60 else 0)
 
@@ -153,10 +152,9 @@ def entrenar_modelo_arbol_decision(date_from=None, date_to=None):
     return {"mensaje": "Modelo de árbol entrenado y guardado correctamente."}
 
 def entrenar_modelo_bosque_aleatorio(date_from=None, date_to=None):
-    conn = conectar_db()
+    engine = conectar_db()
     sql, params = _get_info_por_rango(date_from, date_to)
-    df = pd.read_sql(sql, conn, params=params)
-    conn.close()
+    df = pd.read_sql(sql, con=engine, params=params)
 
     df["volvera_comprar"] = df["dias_desde_ultima_compra"].apply(lambda x: 1 if x < 60 else 0)
 
@@ -174,6 +172,24 @@ def entrenar_modelo_bosque_aleatorio(date_from=None, date_to=None):
 
     return {"mensaje": "Modelo de bosque entrenado y guardado correctamente."}
 
+def obtener_clientes_para_proyeccion():
+    engine = conectar_db()
+    query = """
+        SELECT 
+            c.id AS id,
+            CONCAT(c.nombre, ' ', c.apellido) AS nombre,
+            c.edad,
+            COUNT(DISTINCT p.id) AS pedidos,
+            DATEDIFF(CURDATE(), MAX(p.fecha)) AS dias,
+            SUM(dp.cantidad * dp.precio_unitario - dp.descuento) AS gastado
+        FROM clientes c
+        JOIN pedidos p ON c.id = p.cliente_id
+        JOIN detalle_pedido dp ON p.id = dp.pedido_id
+        GROUP BY c.id, c.nombre, c.apellido, c.edad
+    """
+    df = pd.read_sql(query, con=engine)
+    return df.to_dict(orient="records")
+
 def predecir_con_modelo_lineal(edad, cantidad_total_pedidos, dias_desde_ultima_compra, total_gastado):
     modelo = joblib.load('modelos/modelo_lineal.pkl')
 
@@ -183,40 +199,40 @@ def predecir_con_modelo_lineal(edad, cantidad_total_pedidos, dias_desde_ultima_c
     return {"valor_estimado": float(prediccion[0])}
 
 def predecir_por_cliente_id(cliente_id: int):
-    conn = conectar_db()
-    cursor = conn.cursor(dictionary=True)
+    engine = conectar_db()
+    
+    query = text("""
+        SELECT 
+            c.edad AS edad,
+            COUNT(DISTINCT p.id) AS cantidad_total_pedidos,
+            DATEDIFF(CURDATE(), MAX(p.fecha)) AS dias_desde_ultima_compra,
+            SUM(dp.cantidad * dp.precio_unitario - dp.descuento) AS total_gastado
+        FROM clientes c
+        JOIN pedidos p ON c.id = p.cliente_id
+        JOIN detalle_pedido dp ON p.id = dp.pedido_id
+        WHERE c.id = :cliente_id
+        GROUP BY c.id, c.edad
+    """)
 
-    query = """
-    SELECT 
-        c.edad,
-        COUNT(DISTINCT p.id) AS cantidad_total_pedidos,
-        DATEDIFF(CURDATE(), MAX(p.fecha)) AS dias_desde_ultima_compra,
-        SUM(dp.cantidad * dp.precio_unitario - dp.descuento) AS total_gastado
-    FROM clientes c
-    JOIN pedidos p ON c.id = p.cliente_id
-    JOIN detalle_pedido dp ON p.id = dp.pedido_id
-    WHERE c.id = %s
-    GROUP BY c.id, c.edad
-    """
-
-    cursor.execute(query, (cliente_id,))
-    row = cursor.fetchone()
-    cursor.close()
-    conn.close()
+    with engine.connect() as conn:
+        result = conn.execute(query, {"cliente_id": cliente_id})
+        row = result.fetchone()
 
     if not row:
         raise HTTPException(status_code=404, detail="Cliente no encontrado o sin datos suficientes")
 
-    resultado = predecir_con_modelo_lineal(
-        int(row['edad']),
-        int(row['cantidad_total_pedidos']),
-        int(row['dias_desde_ultima_compra']),
-        float(row['total_gastado'])
-    )
+    # row es un RowMapping, se accede por nombre de columna
+    edad          = int(row["edad"])
+    pedidos       = int(row["cantidad_total_pedidos"])
+    dias          = int(row["dias_desde_ultima_compra"])
+    total_gastado = float(row["total_gastado"])
+
+    # Se realiza la predicción lineal
+    valor_estimado = predecir_con_modelo_lineal(edad, pedidos, dias, total_gastado)
 
     return {
         "cliente_id": cliente_id,
-        "resultado": round(resultado, 2)
+        "valor_estimado": round(valor_estimado, 2)
     }
 
 def predecir_con_modelo_logistico(edad, cantidad_total_pedidos, dias_desde_ultima_compra, total_gastado):
@@ -267,22 +283,3 @@ def predecir_con_modelo_bosque(edad, cantidad_total_pedidos, dias_desde_ultima_c
         "volvera_comprar": bool(pred),
         "probabilidad": round(prob, 2)
     }
-
-def obtener_clientes_para_proyeccion():
-    conn = conectar_db()
-    query = """
-        SELECT 
-            c.id AS id,
-            CONCAT(c.nombre, ' ', c.apellido) AS nombre,
-            c.edad,
-            COUNT(DISTINCT p.id) AS pedidos,
-            DATEDIFF(CURDATE(), MAX(p.fecha)) AS dias,
-            SUM(dp.cantidad * dp.precio_unitario - dp.descuento) AS gastado
-        FROM clientes c
-        JOIN pedidos p ON c.id = p.cliente_id
-        JOIN detalle_pedido dp ON p.id = dp.pedido_id
-        GROUP BY c.id, c.nombre, c.apellido, c.edad
-    """
-    df = pd.read_sql(query, conn)
-    conn.close()
-    return df.to_dict(orient="records")
