@@ -198,7 +198,22 @@ def predecir_con_modelo_lineal(edad, cantidad_total_pedidos, dias_desde_ultima_c
 
     return {"valor_estimado": float(prediccion[0])}
 
-def predecir_por_cliente_id(cliente_id: int):
+def predecir_por_cliente_id(cliente_id: int) -> dict:
+    """
+    Calcula la predicción de compra futura para un cliente dado por su Id
+
+    Args:
+        cliente_id (int): identificador único del cliente en la tabla `clientes`.
+
+    Returns:
+        dict: {
+            "cliente_id": int,
+            "valor_estimado": float  # monto proyectado de su próxima compra
+        }
+
+    Raises:
+        HTTPException: si no se encuentra el cliente o no hay datos suficientes.
+    """
     engine = conectar_db()
     
     query = text("""
