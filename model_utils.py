@@ -2,6 +2,7 @@ import pandas as pd
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import root_mean_squared_error, r2_score, classification_report
 from sqlalchemy import text
@@ -298,3 +299,95 @@ def predecir_con_modelo_bosque(edad, cantidad_total_pedidos, dias_desde_ultima_c
         "volvera_comprar": bool(pred),
         "probabilidad": round(prob, 2)
     }
+
+def forecast_demanda_mensual(
+    n_periodos: int = 12,
+    date_from: str | None = None,
+    date_to:   str | None = None
+) -> dict:
+    """
+    Genera un forecast de demanda mensual usando RandomForestRegressor.
+
+    Args:
+        n_periodos (int): Número de meses futuros a predecir.
+        date_from (str, opcional): Fecha mínima 'YYYY-MM-DD' para filtrar el histórico.
+        date_to   (str, opcional): Fecha máxima 'YYYY-MM-DD' para filtrar el histórico.
+
+    Returns:
+        dict: {
+            "historico": List[{"mes": "YYYY-MM", "demanda": float}],
+            "forecast":   List[{"mes": "YYYY-MM", "demanda": float}]
+        }
+    """
+    engine = conectar_db()
+
+    # Construir filtros de rango de fechas
+    filtros: list[str] = []
+    params: dict[str, str] = {}
+    if date_from:
+        filtros.append("c.fecha >= :date_from")
+        params["date_from"] = date_from
+    if date_to:
+        filtros.append("c.fecha <= :date_to")
+        params["date_to"] = date_to
+    where_clause = f"WHERE {' AND '.join(filtros)}" if filtros else ""
+
+    # Consulta de demanda mensual
+    sql = text(f"""
+        SELECT
+            DATE_FORMAT(c.fecha, '%Y-%m-01') AS mes,
+            SUM(dc.cantidad) AS demanda
+        FROM compras c
+        JOIN detalle_compra dc ON c.id = dc.compra_id
+        {where_clause}
+        GROUP BY mes
+        ORDER BY mes
+    """
+    )
+
+    df = pd.read_sql(sql, con=engine, params=params)
+    df['mes'] = pd.to_datetime(df['mes'])
+    df.sort_values('mes', inplace=True)
+
+    # Crear features temporales
+    df['year'] = df['mes'].dt.year
+    df['month_num'] = df['mes'].dt.month
+
+    X = df[['year', 'month_num']]
+    y = df['demanda']
+
+    # Entrenar modelo
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    model.fit(X, y)
+
+    # Índices futuros
+    last_month = df['mes'].max()
+    future_idx = pd.date_range(
+        start=last_month + pd.offsets.MonthBegin(),
+        periods=n_periodos,
+        freq='MS'
+    )
+    Xf = pd.DataFrame({
+        'year': future_idx.year,
+        'month_num': future_idx.month
+    })
+
+    # Predecir demanda futura
+    y_future = model.predict(Xf)
+
+    # Formatear resultados
+    historico = [
+        {"mes": dt.strftime('%Y-%m'), "demanda": float(d)}
+        for dt, d in zip(df['mes'], df['demanda'])
+    ]
+    forecast = [
+        {"mes": dt.strftime('%Y-%m'), "demanda": float(d)}
+        for dt, d in zip(future_idx, y_future)
+    ]
+
+    # Guardar modelo
+    os.makedirs("modelos", exist_ok=True)
+    with open("modelos/modelo_demanda.pkl", "wb") as f:
+        pickle.dump(model, f)
+
+    return {"historico": historico, "forecast": forecast}

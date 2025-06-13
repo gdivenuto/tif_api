@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from model_utils import entrenar_modelo_regresion_lineal, entrenar_modelo_regresion_logistica, entrenar_modelo_arbol_decision, entrenar_modelo_bosque_aleatorio
 from model_utils import predecir_por_cliente_id, predecir_con_modelo_lineal, predecir_con_modelo_logistico, predecir_con_modelo_arbol, predecir_con_modelo_bosque
-from model_utils import obtener_clientes_para_proyeccion
+from model_utils import obtener_clientes_para_proyeccion, forecast_demanda_mensual
 from pydantic import BaseModel
 from typing import Optional
 
@@ -89,3 +89,7 @@ def predecir_con_bosque(datos: DatosEntrada):
 @app.get("/clientes_para_proyeccion")
 def clientes_para_proyeccion():
     return obtener_clientes_para_proyeccion()
+
+@app.get("/forecast_demanda")
+def forecast_demanda(periodos: int = 12, date_from: str = None, date_to: str = None):
+    return forecast_demanda_mensual(periodos, date_from, date_to)
