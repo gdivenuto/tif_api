@@ -4,14 +4,14 @@ from model_utils import (
     entrenar_modelo_regresion_lineal, 
     entrenar_modelo_regresion_logistica, 
     entrenar_modelo_arbol_decision, 
-    entrenar_modelo_bosque_aleatorio
+    entrenar_modelo_bosque_aleatorio,
 )
 from model_utils import (
     predecir_por_cliente_id, 
     predecir_con_modelo_lineal, 
     predecir_con_modelo_logistico, 
     predecir_con_modelo_arbol, 
-    predecir_con_modelo_bosque
+    predecir_con_modelo_bosque,
 )
 from model_utils import (
     obtener_clientes_para_proyeccion, 
@@ -19,7 +19,8 @@ from model_utils import (
     consumo_material_mensual,
     gasto_por_proveedor,
     top_materiales,
-    color_usage
+    uso_por_color,
+    dispersion_precio_cantidad,
 )
 from pydantic import BaseModel
 from typing import Optional
@@ -46,8 +47,9 @@ app.add_middleware(
 
 @app.get("/")
 def inicio():
-    return {"mensaje": "API de predicci\u00f3n activa"}
+    return {"mensaje": "API de modelos de AAS activa"}
 
+# Endpoints para entrenamientos -----------------------------------------------------------------
 @app.post("/entrenar_lineal")
 def entrenar_lineal(rango: RangoEntrenamiento):
     return entrenar_modelo_regresion_lineal(rango.date_from, rango.date_to)
@@ -64,6 +66,7 @@ def entrenar_arbol(rango: RangoEntrenamiento):
 def entrenar_bosque(rango: RangoEntrenamiento):
     return entrenar_modelo_bosque_aleatorio(rango.date_from, rango.date_to)
 
+# Endpoints para predicciones -----------------------------------------------------------------
 @app.get("/predecir_por_cliente/{cliente_id}")
 def predecir_por_cliente(cliente_id: int):
     return predecir_por_cliente_id(cliente_id)
@@ -112,18 +115,23 @@ def clientes_para_proyeccion():
 def forecast_demanda(periodos: int = 12, date_from: str = None, date_to: str = None):
     return forecast_demanda_mensual(periodos, date_from, date_to)
 
+# Endpoints para las Gráficas -----------------------------------------------------------------
 @app.get("/chart/consumo_material_mensual")
-def consumo_material_mensual_endpoint():
+def chart_consumo_material_mensual():
     return consumo_material_mensual()
 
 @app.get("/chart/gasto_por_proveedor")
-def gasto_por_proveedor_endpoint():
+def chart_gasto_por_proveedor():
     return gasto_por_proveedor()
 
 @app.get("/chart/top_materiales")
-def top_materiales_endpoint():
+def chart_top_materiales():
     return top_materiales()
 
-@app.get("/chart/color_usage")
-def color_usage_endpoint():
-    return color_usage()
+@app.get("/chart/uso_por_color")
+def chart_uso_por_color():
+    return uso_por_color()
+
+@app.get("/chart/dispersion_precio_cantidad")
+def chart_dispersion_precio_cantidad_endpoint():
+    return dispersion_precio_cantidad()

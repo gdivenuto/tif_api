@@ -1,3 +1,4 @@
+from typing import Optional
 import pandas as pd
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
@@ -301,8 +302,8 @@ def predecir_con_modelo_bosque(edad, cantidad_total_pedidos, dias_desde_ultima_c
 
 def forecast_demanda_mensual(
     n_periodos: int = 12,
-    date_from: str | None = None,
-    date_to:   str | None = None
+    date_from: Optional[str] = None,
+    date_to:   Optional[str] = None
 ) -> dict:
     """
     Genera un forecast de demanda mensual usando RandomForestRegressor.
@@ -359,7 +360,7 @@ def forecast_demanda_mensual(
     model = RandomForestRegressor(n_estimators=100, random_state=42)
     model.fit(X, y)
 
-    # Índices futuros
+    # Indices futuros
     last_month = df['mes'].max()
     future_idx = pd.date_range(
         start=last_month + pd.offsets.MonthBegin(),
@@ -456,7 +457,7 @@ def top_materiales() -> dict:
         "data":   df["total_unidades"].tolist()
     }
 
-def color_usage() -> dict:
+def uso_por_color() -> dict:
     """
     Retorna datos para un gráfico de doughnut con el uso porcentual de cada color.
     """
@@ -477,3 +478,17 @@ def color_usage() -> dict:
         "percent": percent.tolist()
     }
 
+def dispersion_precio_cantidad() -> dict:
+    """
+    Retorna los pares (cantidad, precio_unitario) de todas las líneas de detalle_compra,
+    para un gráfico de dispersión precio vs cantidad.
+
+    Returns:
+        dict: {
+            "data": List[{"cantidad": int, "precio_unitario": float}]
+        }
+    """
+    engine = conectar_db()
+    sql = text("SELECT cantidad, precio_unitario FROM detalle_compra")
+    df = pd.read_sql(sql, con=engine)
+    return {"data": df.to_dict(orient="records")}
