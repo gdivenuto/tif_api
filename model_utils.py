@@ -1,8 +1,7 @@
 import pandas as pd
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import root_mean_squared_error, r2_score, classification_report
 from sqlalchemy import text
@@ -391,3 +390,90 @@ def forecast_demanda_mensual(
         pickle.dump(model, f)
 
     return {"historico": historico, "forecast": forecast}
+
+def consumo_material_mensual() -> dict:
+    """
+    Retorna datos para un gráfico de líneas con el consumo mensual de cada materia prima.
+    """
+    engine = conectar_db()
+    sql = text("""
+        SELECT 
+          DATE_FORMAT(c.fecha, '%Y-%m') AS mes,
+          dc.materia_prima_id,
+          SUM(dc.cantidad) AS total_unidades
+        FROM compras c
+        JOIN detalle_compra dc ON c.id = dc.compra_id
+        GROUP BY mes, dc.materia_prima_id
+        ORDER BY mes
+    """)
+    df = pd.read_sql(sql, con=engine)
+    pivot = df.pivot(index="mes", columns="materia_prima_id", values="total_unidades").fillna(0)
+
+    return {
+        "labels": pivot.index.tolist(),
+        "datasets": [
+            {"label": f"MP {mp_id}", "data": pivot[mp_id].tolist()}
+            for mp_id in pivot.columns
+        ]
+    }
+
+def gasto_por_proveedor() -> dict:
+    """
+    Retorna datos para un gráfico de pastel con la proporción de gasto por proveedor.
+    """
+    engine = conectar_db()
+    sql = text("""
+        SELECT 
+          c.proveedor_id,
+          SUM(dc.cantidad * dc.precio_unitario) AS gasto
+        FROM compras c
+        JOIN detalle_compra dc ON c.id = dc.compra_id
+        GROUP BY c.proveedor_id
+    """)
+    df = pd.read_sql(sql, con=engine)
+    return {
+        "labels": df["proveedor_id"].tolist(),
+        "data":   df["gasto"].tolist()
+    }
+
+def top_materiales() -> dict:
+    """
+    Retorna datos para un gráfico de barras con los 10 materiales más comprados (unidades).
+    """
+    engine = conectar_db()
+    sql = text("""
+        SELECT 
+          dc.materia_prima_id,
+          SUM(dc.cantidad) AS total_unidades
+        FROM detalle_compra dc
+        GROUP BY dc.materia_prima_id
+        ORDER BY total_unidades DESC
+        LIMIT 10
+    """)
+    df = pd.read_sql(sql, con=engine)
+    return {
+        "labels": df["materia_prima_id"].tolist(),
+        "data":   df["total_unidades"].tolist()
+    }
+
+def color_usage() -> dict:
+    """
+    Retorna datos para un gráfico de doughnut con el uso porcentual de cada color.
+    """
+    engine = conectar_db()
+    sql = text("""
+        SELECT 
+          dc.color_id,
+          COUNT(*) AS usos
+        FROM detalle_compra dc
+        GROUP BY dc.color_id
+    """)
+    df = pd.read_sql(sql, con=engine)
+    total = df["usos"].sum()
+    percent = (df["usos"] / total * 100).round(1)
+    return {
+        "labels": df["color_id"].tolist(),
+        "data":   df["usos"].tolist(),
+        "percent": percent.tolist()
+    }
+

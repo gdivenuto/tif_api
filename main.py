@@ -1,8 +1,26 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from model_utils import entrenar_modelo_regresion_lineal, entrenar_modelo_regresion_logistica, entrenar_modelo_arbol_decision, entrenar_modelo_bosque_aleatorio
-from model_utils import predecir_por_cliente_id, predecir_con_modelo_lineal, predecir_con_modelo_logistico, predecir_con_modelo_arbol, predecir_con_modelo_bosque
-from model_utils import obtener_clientes_para_proyeccion, forecast_demanda_mensual
+from model_utils import (
+    entrenar_modelo_regresion_lineal, 
+    entrenar_modelo_regresion_logistica, 
+    entrenar_modelo_arbol_decision, 
+    entrenar_modelo_bosque_aleatorio
+)
+from model_utils import (
+    predecir_por_cliente_id, 
+    predecir_con_modelo_lineal, 
+    predecir_con_modelo_logistico, 
+    predecir_con_modelo_arbol, 
+    predecir_con_modelo_bosque
+)
+from model_utils import (
+    obtener_clientes_para_proyeccion, 
+    forecast_demanda_mensual,
+    consumo_material_mensual,
+    gasto_por_proveedor,
+    top_materiales,
+    color_usage
+)
 from pydantic import BaseModel
 from typing import Optional
 
@@ -93,3 +111,19 @@ def clientes_para_proyeccion():
 @app.get("/forecast_demanda")
 def forecast_demanda(periodos: int = 12, date_from: str = None, date_to: str = None):
     return forecast_demanda_mensual(periodos, date_from, date_to)
+
+@app.get("/chart/consumo_material_mensual")
+def consumo_material_mensual_endpoint():
+    return consumo_material_mensual()
+
+@app.get("/chart/gasto_por_proveedor")
+def gasto_por_proveedor_endpoint():
+    return gasto_por_proveedor()
+
+@app.get("/chart/top_materiales")
+def top_materiales_endpoint():
+    return top_materiales()
+
+@app.get("/chart/color_usage")
+def color_usage_endpoint():
+    return color_usage()
