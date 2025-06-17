@@ -207,7 +207,7 @@ def entrenar_modelo_arbol_decision(
     """
     engine = conectar_db()
     sql, params = _get_info_por_rango(date_from, date_to)
-    df = pd.read_sql(text(sql), con=engine, params=params)
+    df = pd.read_sql(sql, con=engine, params=params)
 
     if df.empty:
         return {"mensaje": "No hay datos suficientes para entrenar el modelo de árbol de decisión."}
@@ -276,7 +276,7 @@ def entrenar_modelo_bosque_aleatorio(
     """
     engine = conectar_db()
     sql, params = _get_info_por_rango(date_from, date_to)
-    df = pd.read_sql(text(sql), con=engine, params=params)
+    df = pd.read_sql(sql, con=engine, params=params)
 
     if df.empty:
         return {"mensaje": "No hay datos suficientes para entrenar el modelo de bosque aleatorio."}
