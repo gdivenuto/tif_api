@@ -547,28 +547,42 @@ def consumo_material_mensual() -> dict:
     Retorna datos para un gráfico de líneas con el consumo mensual de cada materia prima.
     """
     engine = conectar_db()
-    sql = text("""
+    sql = """
         SELECT 
           DATE_FORMAT(c.fecha, '%Y-%m') AS mes,
-          dc.materia_prima_id,
+          mp.nombre AS materia_prima_nombre,
           SUM(dc.cantidad) AS total_unidades
         FROM compras c
-        JOIN detalle_compra dc ON c.id = dc.compra_id
-        GROUP BY mes, dc.materia_prima_id
+        JOIN detalle_compra dc 
+          ON c.id = dc.compra_id
+        JOIN materias_primas mp 
+          ON dc.materia_prima_id = mp.id
+        GROUP BY mes, mp.nombre
         ORDER BY mes
-    """)
+    """
     df = pd.read_sql(sql, con=engine)
 
     if df.empty:
         return {"labels": [], "datasets": []}
 
-    pivot = df.pivot(index="mes", columns="materia_prima_id", values="total_unidades").fillna(0)
+    pivot = df.pivot_table(
+        index="mes", 
+        columns="materia_prima_nombre", 
+        values="total_unidades",
+        aggfunc="sum", # para combinar todas las filas duplicadas sumando sus valores
+        fill_value=0 # cuando no hay datos, se rellena con cero
+    )
 
     return {
+        # lista de meses ordenados para el eje X
         "labels": pivot.index.tolist(),
+        # lista de objetos, uno por cada materia prima
         "datasets": [
-            {"label": f"MP {mp_id}", "data": pivot[mp_id].tolist()}
-            for mp_id in pivot.columns
+            {
+                "label": materia, # f"MP {mp_id}" 
+                "data": pivot[materia].tolist() # mp_id
+            }
+            for materia in pivot.columns # mp_id
         ]
     }
 
@@ -577,45 +591,50 @@ def gasto_por_proveedor() -> dict:
     Retorna datos para un gráfico de pastel con la proporción de gasto por proveedor.
     """
     engine = conectar_db()
-    sql = text("""
+    sql = """
         SELECT 
-          c.proveedor_id,
+          p.razon_social,
           SUM(dc.cantidad * dc.precio_unitario) AS gasto
         FROM compras c
-        JOIN detalle_compra dc ON c.id = dc.compra_id
-        GROUP BY c.proveedor_id
-    """)
+        JOIN detalle_compra dc 
+          ON c.id = dc.compra_id
+        JOIN proveedores p 
+          ON c.proveedor_id = p.id
+        GROUP BY p.razon_social
+    """
     df = pd.read_sql(sql, con=engine)
 
     if df.empty:
         return {"labels": [], "data": []}
 
     return {
-        "labels": df["proveedor_id"].tolist(),
+        "labels": df["razon_social"].tolist(),
         "data":   df["gasto"].tolist()
     }
 
 def top_materiales() -> dict:
     """
-    Retorna datos para un gráfico de barras con los 10 materiales más comprados (unidades).
+    Retorna datos para un gráfico de barras con los 7 materiales más comprados (unidades).
     """
     engine = conectar_db()
-    sql = text("""
+    sql = """
         SELECT 
-          dc.materia_prima_id,
+          mp.nombre,
           SUM(dc.cantidad) AS total_unidades
         FROM detalle_compra dc
-        GROUP BY dc.materia_prima_id
+        JOIN materias_primas mp 
+          ON dc.materia_prima_id = mp.id
+        GROUP BY mp.nombre
         ORDER BY total_unidades DESC
         LIMIT 10
-    """)
+    """
     df = pd.read_sql(sql, con=engine)
 
     if df.empty:
         return {"labels": [], "data": []}
 
     return {
-        "labels": df["materia_prima_id"].tolist(),
+        "labels": df["nombre"].tolist(),
         "data":   df["total_unidades"].tolist()
     }
 
@@ -624,13 +643,15 @@ def uso_por_color() -> dict:
     Retorna datos para un gráfico de doughnut con el uso porcentual de cada color.
     """
     engine = conectar_db()
-    sql = text("""
+    sql = """
         SELECT 
-          dc.color_id,
+          c.nombre,
           COUNT(*) AS usos
         FROM detalle_compra dc
-        GROUP BY dc.color_id
-    """)
+        JOIN colores c 
+          ON dc.color_id = c.id
+        GROUP BY c.nombre
+    """
     df = pd.read_sql(sql, con=engine)
 
     if df.empty:
@@ -642,8 +663,9 @@ def uso_por_color() -> dict:
 
     total = df["usos"].sum()
     percent = (df["usos"] / total * 100).round(1)
+
     return {
-        "labels": df["color_id"].tolist(),
+        "labels": df["nombre"].tolist(),
         "data":   df["usos"].tolist(),
         "percent": percent.tolist()
     }
