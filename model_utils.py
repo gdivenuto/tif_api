@@ -508,7 +508,7 @@ def forecast_demanda_mensual(
     X = df[['year', 'month_num']]
     y = df['demanda']
 
-    # Se entrena el modelo
+    # Se entrena el modelo, con 100 estimadores (árboles de decisión)
     model = RandomForestRegressor(n_estimators=100, random_state=42)
     model.fit(X, y)
 
