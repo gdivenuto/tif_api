@@ -459,7 +459,7 @@ def forecast_demanda_mensual(
     date_to:   Optional[str] = None
 ) -> dict:
     """
-    Genera un forecast de demanda mensual usando RandomForestRegressor.
+    Genera un pronóstico de demanda mensual usando RandomForestRegressor.
     Si no hay datos históricos, devuelve historico=[] y forecast=[].
 
     Args:
@@ -509,8 +509,8 @@ def forecast_demanda_mensual(
     y = df['demanda']
 
     # Se entrena el modelo, con 100 estimadores (árboles de decisión)
-    model = RandomForestRegressor(n_estimators=100, random_state=42)
-    model.fit(X, y)
+    modelo = RandomForestRegressor(n_estimators=100, random_state=42)
+    modelo.fit(X, y)
 
     last_month = df['mes'].max()
     future_idx = pd.date_range(
@@ -524,24 +524,32 @@ def forecast_demanda_mensual(
     })
 
     # Se predice la demanda futura
-    y_future = model.predict(Xf)
+    y_future = modelo.predict(Xf)
 
     historico = [
-        {"mes": dt.strftime('%Y-%m'), "demanda": float(d)}
+        {
+            "mes": dt.strftime('%Y-%m'), 
+            "demanda": float(d)
+        }
         for dt, d in zip(df['mes'], df['demanda'])
     ]
     forecast = [
-        {"mes": dt.strftime('%Y-%m'), "demanda": float(d)}
+        {
+            "mes": dt.strftime('%Y-%m'), 
+            "demanda": float(d)
+        }
         for dt, d in zip(future_idx, y_future)
     ]
 
     # Se guarda el modelo
     os.makedirs("modelos", exist_ok=True)
     with open("modelos/modelo_demanda.pkl", "wb") as f:
-        pickle.dump(model, f)
+        pickle.dump(modelo, f)
 
     return {"historico": historico, "forecast": forecast}
 
+# Funciones para 
+# --------------------------------------------------------------------
 def consumo_material_mensual() -> dict:
     """
     Retorna datos para un gráfico de líneas con el consumo mensual de cada materia prima.
