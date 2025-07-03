@@ -7,6 +7,10 @@ from model_utils import (
     entrenar_modelo_bosque_aleatorio,
 )
 from model_utils import (
+    entrenar_modelo_consumo_materia_prima,
+    predecir_consumo_materia_prima,
+)
+from model_utils import (
     predecir_por_cliente_id, 
     predecir_con_modelo_lineal, 
     predecir_con_modelo_logistico, 
@@ -48,6 +52,14 @@ app.add_middleware(
 @app.get("/")
 def inicio():
     return {"mensaje": "API de modelos de AAS activa"}
+
+@app.post("/entrenar_consumo_mp")
+def entrenar_consumo_mp(rango: RangoEntrenamiento):
+    return entrenar_modelo_consumo_materia_prima(rango.date_from, rango.date_to)
+
+@app.get("/forecast_consumo_mp")
+def forecast_consumo_mp():
+    return predecir_consumo_materia_prima()
 
 # Endpoints para entrenamientos -----------------------------------------------------------------
 @app.post("/entrenar_lineal")

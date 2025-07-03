@@ -1,12 +1,17 @@
-from typing import Optional
+import joblib
+import pickle
+import os
 import pandas as pd
+from typing import Optional
+
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import (
     root_mean_squared_error, # Pérdida de regresión del error cuadrático medio
-    r2_score, # Función de puntuación de regresión R^2 (coeficiente de determinación)
+    mean_squared_error, # Raíz del error cuadrático medio
+    r2_score, # Coeficiente de determinación: función de puntuación de regresión R^2
     classification_report, # reporte con las principales métricas de clasificación
     accuracy_score, # proporción de aciertos global
     precision_score, # de los positivos predichos, cuántos son correctos
@@ -14,11 +19,147 @@ from sklearn.metrics import (
     f1_score, # media armónica de precision y recall
 )
 from sqlalchemy import text
-from db import conectar_db
 from fastapi import HTTPException
-import joblib
-import pickle
-import os
+
+from db import conectar_db
+
+def entrenar_modelo_consumo_materia_prima(
+    date_from: Optional[str] = None,
+    date_to:   Optional[str] = None
+) -> dict:
+    """
+    Entrena un RandomForestRegressor para estimar el consumo mensual
+    de cada materia prima, usando datos históricos de compras.
+
+    Args:
+        date_from (str, optional): Fecha mínima 'YYYY-MM-DD' para filtrar histórico.
+        date_to   (str, optional): Fecha máxima 'YYYY-MM-DD' para filtrar histórico.
+
+    Returns:
+        dict: {
+            "mensaje": str,
+            "r2": float,    # coeficiente de determinación
+            "rmse": float   # raíz del error cuadrático medio
+        }
+        o un mensaje en caso de no haber datos.
+    """
+    engine = conectar_db()
+
+    sql = """
+        SELECT
+          DATE_FORMAT(c.fecha, '%%Y-%%m-01') AS mes,
+          dc.materia_prima_id,
+          SUM(dc.cantidad) AS consumo
+        FROM compras c
+        JOIN detalle_compra dc ON c.id = dc.compra_id
+        WHERE (%s IS NULL OR c.fecha >= %s)
+          AND (%s IS NULL OR c.fecha <= %s)
+        GROUP BY mes, dc.materia_prima_id
+        ORDER BY mes
+    """
+    params = (date_from, date_from, date_to, date_to)
+    df = pd.read_sql(sql, con=engine, params=params)
+
+    if df.empty:
+        return {"mensaje": "No hay datos suficientes para entrenar el modelo de consumo."}
+
+    # Features temporales
+    df["mes"]   = pd.to_datetime(df["mes"])
+    df["year"]  = df["mes"].dt.year
+    df["month"] = df["mes"].dt.month
+
+    X = df[["year", "month", "materia_prima_id"]]
+    y = df["consumo"]
+
+    if len(df) < 2:
+        return {"mensaje": "Se requieren al menos 2 registros para entrenar el modelo."}
+
+    try:
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.2, random_state=42
+        )
+        modelo = RandomForestRegressor(n_estimators=100, random_state=42)
+        modelo.fit(X_train, y_train)
+
+        y_pred = modelo.predict(X_test)
+        r2   = r2_score(y_test, y_pred)
+        rmse = root_mean_squared_error(y_test, y_pred, squared=False)
+
+        os.makedirs("modelos", exist_ok=True)
+        with open("modelos/modelo_consumo_mp.pkl", "wb") as f:
+            pickle.dump(modelo, f)
+
+        return {
+            "mensaje": "Modelo de consumo de materia prima entrenado y guardado correctamente.",
+            "r2": round(r2, 3),
+            "rmse": round(rmse, 3)
+        }
+
+    except Exception as e:
+        return {
+            "mensaje": "Error al entrenar o guardar el modelo de consumo.",
+            "error": str(e)
+        }
+
+
+def predecir_consumo_materia_prima() -> dict:
+    """
+    Carga el modelo de consumo entrenado y predice la demanda del mes siguiente
+    para cada materia prima presente.
+
+    Returns:
+        dict: {
+            "forecast": [
+                {"mes": "YYYY-MM", "materia_prima_id": int, "consumo_pred": float},
+                ...
+            ]
+        }
+    """
+    modelo_path = "modelos/modelo_consumo_mp.pkl"
+    if not os.path.exists(modelo_path):
+        return {"forecast": []}
+
+    with open(modelo_path, "rb") as f:
+        modelo = pickle.load(f)
+
+    engine = conectar_db()
+    # Obtener última fecha de compras registradas
+    last_fecha = pd.read_sql(
+        "SELECT MAX(fecha) AS last FROM compras", con=engine
+    )["last"][0]
+    if not last_fecha:
+        return {"forecast": []}
+
+    last = pd.to_datetime(last_fecha)
+    # calcular primer día del mes siguiente
+    next_month = (last + pd.offsets.MonthBegin()).replace(day=1)
+
+    # materiales únicos
+    mp_df = pd.read_sql(
+        "SELECT DISTINCT materia_prima_id FROM detalle_compra",
+        con=engine
+    )
+    materiales = mp_df["materia_prima_id"].tolist()
+
+    # preparar DataFrame de predicción
+    Xf = pd.DataFrame({
+        "year": [next_month.year] * len(materiales),
+        "month": [next_month.month] * len(materiales),
+        "materia_prima_id": materiales
+    })
+
+    preds = modelo.predict(Xf)
+    forecast = [
+        {
+            "mes": next_month.strftime("%Y-%m"),
+            "materia_prima_id": int(mp),
+            "consumo_pred": round(float(p), 2)
+        }
+        for mp, p in zip(materiales, preds)
+    ]
+
+    return {"forecast": forecast}
+
 
 def obtener_datos_para_entrenamiento() -> list[dict]:
     """
@@ -622,7 +763,7 @@ def gasto_por_proveedor() -> dict:
 
 def top_materiales() -> dict:
     """
-    Retorna datos para un gráfico de barras con los 7 materiales más comprados (unidades).
+    Retorna datos para un gráfico de barras con los 10 materiales más comprados (unidades).
     """
     engine = conectar_db()
     sql = """
