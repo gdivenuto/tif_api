@@ -47,7 +47,7 @@ def entrenar_modelo_consumo_materia_prima(
 
     sql = """
         SELECT
-          DATE_FORMAT(c.fecha, '%%Y-%%m-01') AS mes,
+          DATE_FORMAT(c.fecha, '%Y-%m-01') AS mes,
           dc.materia_prima_id,
           SUM(dc.cantidad) AS consumo
         FROM compras c
@@ -83,14 +83,14 @@ def entrenar_modelo_consumo_materia_prima(
 
         y_pred = modelo.predict(X_test)
         r2   = r2_score(y_test, y_pred)
-        rmse = root_mean_squared_error(y_test, y_pred, squared=False)
+        rmse = root_mean_squared_error(y_test, y_pred)
 
         os.makedirs("modelos", exist_ok=True)
         with open("modelos/modelo_consumo_mp.pkl", "wb") as f:
             pickle.dump(modelo, f)
 
         return {
-            "mensaje": "Modelo de consumo de materia prima entrenado y guardado correctamente.",
+            "mensaje": "El modelo de consumo de materias primas se ha entrenado y guardado correctamente.",
             "r2": round(r2, 3),
             "rmse": round(rmse, 3)
         }
