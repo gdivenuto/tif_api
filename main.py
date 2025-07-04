@@ -57,8 +57,8 @@ def inicio():
 def entrenar_consumo_mp(rango: RangoEntrenamiento):
     return entrenar_modelo_consumo_materia_prima(rango.date_from, rango.date_to)
 
-@app.get("/forecast_consumo_mp")
-def forecast_consumo_mp():
+@app.get("/predecir_consumo_mp")
+def predecir_consumo_mp():
     return predecir_consumo_materia_prima()
 
 # Endpoints para entrenamientos -----------------------------------------------------------------

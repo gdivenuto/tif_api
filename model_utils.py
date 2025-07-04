@@ -105,15 +105,7 @@ def entrenar_modelo_consumo_materia_prima(
 def predecir_consumo_materia_prima() -> dict:
     """
     Carga el modelo de consumo entrenado y predice la demanda del mes siguiente
-    para cada materia prima presente.
-
-    Returns:
-        dict: {
-            "forecast": [
-                {"mes": "YYYY-MM", "materia_prima_id": int, "consumo_pred": float},
-                ...
-            ]
-        }
+    para cada materia prima, devolviendo también su nombre.
     """
     modelo_path = "modelos/modelo_consumo_mp.pkl"
     if not os.path.exists(modelo_path):
@@ -123,40 +115,47 @@ def predecir_consumo_materia_prima() -> dict:
         modelo = pickle.load(f)
 
     engine = conectar_db()
-    # Obtener última fecha de compras registradas
-    last_fecha = pd.read_sql(
-        "SELECT MAX(fecha) AS last FROM compras", con=engine
-    )["last"][0]
+    # Se obtiene la última fecha de compra
+    last_fecha = pd.read_sql("SELECT MAX(fecha) AS last FROM compras", con=engine)["last"][0]
     if not last_fecha:
         return {"forecast": []}
 
     last = pd.to_datetime(last_fecha)
-    # calcular primer día del mes siguiente
     next_month = (last + pd.offsets.MonthBegin()).replace(day=1)
+    mes_str = next_month.strftime("%Y-%m")
 
-    # materiales únicos
-    mp_df = pd.read_sql(
-        "SELECT DISTINCT materia_prima_id FROM detalle_compra",
-        con=engine
-    )
-    materiales = mp_df["materia_prima_id"].tolist()
+    # Se obtiene el id y nombre de cada materia prima que aparece en detalle_compra
+    mp_df = pd.read_sql("""
+        SELECT DISTINCT
+          dc.materia_prima_id,
+          mp.nombre AS materia_prima_nombre
+        FROM detalle_compra dc
+        JOIN materias_primas mp
+          ON dc.materia_prima_id = mp.id
+    """, con=engine)
 
-    # preparar DataFrame de predicción
+    if mp_df.empty:
+        return {"forecast": []}
+
+    # Se preparan los features de predicción
     Xf = pd.DataFrame({
-        "year": [next_month.year] * len(materiales),
-        "month": [next_month.month] * len(materiales),
-        "materia_prima_id": materiales
+        "year": [next_month.year] * len(mp_df),
+        "month": [next_month.month] * len(mp_df),
+        "materia_prima_id": mp_df["materia_prima_id"]
     })
 
+    # Se predice
     preds = modelo.predict(Xf)
-    forecast = [
-        {
-            "mes": next_month.strftime("%Y-%m"),
-            "materia_prima_id": int(mp),
+
+    # Se construye la lista con la información a mostrar en el sistema
+    forecast = []
+    for (idx, row), p in zip(mp_df.iterrows(), preds):
+        forecast.append({
+            "mes": mes_str,
+            "materia_prima_id": int(row["materia_prima_id"]),
+            "materia_prima_nombre": row["materia_prima_nombre"],
             "consumo_pred": round(float(p), 2)
-        }
-        for mp, p in zip(materiales, preds)
-    ]
+        })
 
     return {"forecast": forecast}
 
@@ -393,7 +392,6 @@ def entrenar_modelo_arbol_decision(
             "mensaje": "Error al entrenar o guardar el modelo de árbol de decisión.",
             "error": str(e)
         }
-
 
 def entrenar_modelo_bosque_aleatorio(
     date_from: Optional[str] = None,
@@ -689,7 +687,7 @@ def forecast_demanda_mensual(
 
     return {"historico": historico, "forecast": forecast}
 
-# Funciones para 
+# Funciones para Monitoreo
 # --------------------------------------------------------------------
 def consumo_material_mensual() -> dict:
     """
