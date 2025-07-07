@@ -115,6 +115,7 @@ def predecir_consumo_materia_prima() -> dict:
         modelo = pickle.load(f)
 
     engine = conectar_db()
+
     # Se obtiene la última fecha de compra
     last_fecha = pd.read_sql("SELECT MAX(fecha) AS last FROM compras", con=engine)["last"][0]
     if not last_fecha:
@@ -124,10 +125,11 @@ def predecir_consumo_materia_prima() -> dict:
     next_month = (last + pd.offsets.MonthBegin()).replace(day=1)
     mes_str = next_month.strftime("%Y-%m")
 
-    # Se obtiene el id y nombre de cada materia prima que aparece en detalle_compra
+    # Se obtiene el id, codigo y nombre de cada materia prima comprada
     mp_df = pd.read_sql("""
         SELECT DISTINCT
           dc.materia_prima_id,
+          mp.codigo AS materia_prima_codigo,
           mp.nombre AS materia_prima_nombre
         FROM detalle_compra dc
         JOIN materias_primas mp
@@ -153,8 +155,9 @@ def predecir_consumo_materia_prima() -> dict:
         forecast.append({
             "mes": mes_str,
             "materia_prima_id": int(row["materia_prima_id"]),
+            "materia_prima_codigo": row["materia_prima_codigo"],
             "materia_prima_nombre": row["materia_prima_nombre"],
-            "consumo_pred": round(float(p), 2)
+            "consumo_estimado": round(float(p), 2)
         })
 
     return {"forecast": forecast}
