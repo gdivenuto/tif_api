@@ -118,7 +118,8 @@ def predecir_con_bosque(datos: DatosEntrada):
         datos.dias_desde_ultima_compra,
         datos.total_gastado
     )
-
+# -----------------------------------------------------------------
+# Proyección de ventas por Cliente
 @app.get("/clientes_para_proyeccion")
 def clientes_para_proyeccion():
     return obtener_clientes_para_proyeccion()
@@ -127,7 +128,7 @@ def clientes_para_proyeccion():
 def forecast_demanda(periodos: int = 12, date_from: str = None, date_to: str = None):
     return forecast_demanda_mensual(periodos, date_from, date_to)
 
-# Endpoints para las Gráficas -----------------------------------------------------------------
+# Endpoints para las Gráficas de Monitoreo -----------------------------------------------------------------
 @app.get("/chart/consumo_material_mensual")
 def chart_consumo_material_mensual():
     return consumo_material_mensual()

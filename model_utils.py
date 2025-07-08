@@ -1,3 +1,4 @@
+import math
 import joblib
 import pickle
 import os
@@ -47,7 +48,7 @@ def entrenar_modelo_consumo_materia_prima(
 
     sql = """
         SELECT
-          DATE_FORMAT(c.fecha, '%Y-%m-01') AS mes,
+          DATE_FORMAT(c.fecha, '%%Y-%%m-01') AS mes,
           dc.materia_prima_id,
           SUM(dc.cantidad) AS consumo
         FROM compras c
@@ -157,7 +158,7 @@ def predecir_consumo_materia_prima() -> dict:
             "materia_prima_id": int(row["materia_prima_id"]),
             "materia_prima_codigo": row["materia_prima_codigo"],
             "materia_prima_nombre": row["materia_prima_nombre"],
-            "consumo_estimado": round(float(p), 2)
+            "consumo_estimado": math.ceil(p) #round(float(p), 2)
         })
 
     return {"forecast": forecast}
@@ -464,6 +465,7 @@ def entrenar_modelo_bosque_aleatorio(
             "error": str(e)
         }
 
+# Retorna los Clientes a los que se les vendió, con su monto total gastado
 def obtener_clientes_para_proyeccion():
     engine = conectar_db()
     query = """
@@ -699,7 +701,7 @@ def consumo_material_mensual() -> dict:
     engine = conectar_db()
     sql = """
         SELECT 
-          DATE_FORMAT(c.fecha, '%Y-%m') AS mes,
+          DATE_FORMAT(c.fecha, '%%Y-%%m') AS mes,
           mp.nombre AS materia_prima_nombre,
           SUM(dc.cantidad) AS total_unidades
         FROM compras c
@@ -788,6 +790,25 @@ def top_materiales() -> dict:
         "data":   df["total_unidades"].tolist()
     }
 
+def dispersion_precio_cantidad() -> dict:
+    """
+    Retorna los pares (cantidad, precio_unitario) de todas las líneas de detalle_compra,
+    para un gráfico de dispersión precio vs cantidad.
+
+    Returns:
+        dict: {
+            "data": List[{"cantidad": int, "precio_unitario": float}]
+        }
+    """
+    engine = conectar_db()
+    sql = text("SELECT cantidad, precio_unitario FROM detalle_compra")
+    df = pd.read_sql(sql, con=engine)
+
+    if df.empty:
+        return {"data": []}
+
+    return {"data": df.to_dict(orient="records")}
+
 def uso_por_color() -> dict:
     """
     Retorna datos para un gráfico de doughnut con el uso porcentual de cada color.
@@ -819,22 +840,3 @@ def uso_por_color() -> dict:
         "data":   df["usos"].tolist(),
         "percent": percent.tolist()
     }
-
-def dispersion_precio_cantidad() -> dict:
-    """
-    Retorna los pares (cantidad, precio_unitario) de todas las líneas de detalle_compra,
-    para un gráfico de dispersión precio vs cantidad.
-
-    Returns:
-        dict: {
-            "data": List[{"cantidad": int, "precio_unitario": float}]
-        }
-    """
-    engine = conectar_db()
-    sql = text("SELECT cantidad, precio_unitario FROM detalle_compra")
-    df = pd.read_sql(sql, con=engine)
-
-    if df.empty:
-        return {"data": []}
-
-    return {"data": df.to_dict(orient="records")}

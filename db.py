@@ -8,10 +8,10 @@ PASSWORD = "gabilan"
 DBNAME   = "uaa_tif"
 
 # URL de SQLAlchemy
-DATABASE_URL = f"mysql+mysqlconnector://{USER}:{PASSWORD}@{HOST}/{DBNAME}"
+DATABASE_URL = f"mysql+pymysql://{USER}:{PASSWORD}@{HOST}/{DBNAME}"
 
 # Se crea el engine(pool de conexiones) una sola vez al importar este módulo
-engine = create_engine(DATABASE_URL, echo=False, future=True)
+engine = create_engine(DATABASE_URL, echo=False, future=True, pool_pre_ping=True)
 
 def conectar_db() -> Engine:
     """
