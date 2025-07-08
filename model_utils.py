@@ -11,7 +11,7 @@ from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import (
     root_mean_squared_error, # Pérdida de regresión del error cuadrático medio
-    mean_squared_error, # Raíz del error cuadrático medio
+    mean_squared_error, # Raíz del error cuadrático medio (OBSOLETO)
     r2_score, # Coeficiente de determinación: función de puntuación de regresión R^2
     classification_report, # reporte con las principales métricas de clasificación
     accuracy_score, # proporción de aciertos global
@@ -102,7 +102,6 @@ def entrenar_modelo_consumo_materia_prima(
             "error": str(e)
         }
 
-
 def predecir_consumo_materia_prima() -> dict:
     """
     Carga el modelo de consumo entrenado y predice la demanda del mes siguiente
@@ -163,7 +162,7 @@ def predecir_consumo_materia_prima() -> dict:
 
     return {"forecast": forecast}
 
-
+# Para predicciones de Ventas
 def obtener_datos_para_entrenamiento() -> list[dict]:
     """
     Trae los datos agregados por cliente para el entrenamiento del modelo.
@@ -465,8 +464,8 @@ def entrenar_modelo_bosque_aleatorio(
             "error": str(e)
         }
 
-# Retorna los Clientes a los que se les vendió, con su monto total gastado
-def obtener_clientes_para_proyeccion():
+# Retorna los Clientes que compraron, con su monto total gastado
+def obtener_clientes_que_compraron():
     engine = conectar_db()
     query = """
         SELECT 
@@ -495,6 +494,55 @@ def predecir_con_modelo_lineal(edad, cantidad_total_pedidos, dias_desde_ultima_c
     prediccion = modelo.predict(features)
 
     return {"valor_estimado": float(prediccion[0])}
+
+def predecir_con_modelo_logistico(edad, cantidad_total_pedidos, dias_desde_ultima_compra, total_gastado):
+    modelo_path = "modelos/modelo_logistico.pkl"
+    if not os.path.exists(modelo_path):
+        raise FileNotFoundError("El modelo de clasificación no está entrenado.")
+
+    with open(modelo_path, "rb") as f:
+        modelo = pickle.load(f)
+
+    X = [[edad, cantidad_total_pedidos, dias_desde_ultima_compra, total_gastado]]
+    pred = modelo.predict(X)[0]
+    prob = modelo.predict_proba(X)[0][1]  # Probabilidad de que sea clase 1
+
+    return {
+        "volvera_comprar": bool(pred),
+        "probabilidad": round(prob, 2)
+    }
+
+def predecir_con_modelo_arbol(edad, cantidad_total_pedidos, dias_desde_ultima_compra, total_gastado):
+    modelo_path = "modelos/modelo_arbol.pkl"
+    if not os.path.exists(modelo_path):
+        raise FileNotFoundError("El modelo de árbol no está entrenado.")
+    with open(modelo_path, "rb") as f:
+        modelo = pickle.load(f)
+
+    X = [[edad, cantidad_total_pedidos, dias_desde_ultima_compra, total_gastado]]
+    pred = modelo.predict(X)[0]
+    prob = modelo.predict_proba(X)[0][1] if hasattr(modelo, 'predict_proba') else None
+
+    return {
+        "volvera_comprar": bool(pred),
+        "probabilidad": round(prob, 2) if prob is not None else "no disponible"
+    }
+
+def predecir_con_modelo_bosque(edad, cantidad_total_pedidos, dias_desde_ultima_compra, total_gastado):
+    modelo_path = "modelos/modelo_bosque.pkl"
+    if not os.path.exists(modelo_path):
+        raise FileNotFoundError("El modelo de bosque no está entrenado.")
+    with open(modelo_path, "rb") as f:
+        modelo = pickle.load(f)
+
+    X = [[edad, cantidad_total_pedidos, dias_desde_ultima_compra, total_gastado]]
+    pred = modelo.predict(X)[0]
+    prob = modelo.predict_proba(X)[0][1]
+
+    return {
+        "volvera_comprar": bool(pred),
+        "probabilidad": round(prob, 2)
+    }
 
 def predecir_por_cliente_id(cliente_id: int) -> dict:
     """
@@ -548,56 +596,7 @@ def predecir_por_cliente_id(cliente_id: int) -> dict:
         "valor_estimado": round(valor_estimado, 2)
     }
 
-def predecir_con_modelo_logistico(edad, cantidad_total_pedidos, dias_desde_ultima_compra, total_gastado):
-    modelo_path = "modelos/modelo_logistico.pkl"
-    if not os.path.exists(modelo_path):
-        raise FileNotFoundError("El modelo de clasificación no está entrenado.")
-
-    with open(modelo_path, "rb") as f:
-        modelo = pickle.load(f)
-
-    X = [[edad, cantidad_total_pedidos, dias_desde_ultima_compra, total_gastado]]
-    pred = modelo.predict(X)[0]
-    prob = modelo.predict_proba(X)[0][1]  # Probabilidad de que sea clase 1
-
-    return {
-        "volvera_comprar": bool(pred),
-        "probabilidad": round(prob, 2)
-    }
-
-def predecir_con_modelo_arbol(edad, cantidad_total_pedidos, dias_desde_ultima_compra, total_gastado):
-    modelo_path = "modelos/modelo_arbol.pkl"
-    if not os.path.exists(modelo_path):
-        raise FileNotFoundError("El modelo de árbol no está entrenado.")
-    with open(modelo_path, "rb") as f:
-        modelo = pickle.load(f)
-
-    X = [[edad, cantidad_total_pedidos, dias_desde_ultima_compra, total_gastado]]
-    pred = modelo.predict(X)[0]
-    prob = modelo.predict_proba(X)[0][1] if hasattr(modelo, 'predict_proba') else None
-
-    return {
-        "volvera_comprar": bool(pred),
-        "probabilidad": round(prob, 2) if prob is not None else "no disponible"
-    }
-
-def predecir_con_modelo_bosque(edad, cantidad_total_pedidos, dias_desde_ultima_compra, total_gastado):
-    modelo_path = "modelos/modelo_bosque.pkl"
-    if not os.path.exists(modelo_path):
-        raise FileNotFoundError("El modelo de bosque no está entrenado.")
-    with open(modelo_path, "rb") as f:
-        modelo = pickle.load(f)
-
-    X = [[edad, cantidad_total_pedidos, dias_desde_ultima_compra, total_gastado]]
-    pred = modelo.predict(X)[0]
-    prob = modelo.predict_proba(X)[0][1]
-
-    return {
-        "volvera_comprar": bool(pred),
-        "probabilidad": round(prob, 2)
-    }
-
-def forecast_demanda_mensual(
+def forecast_demanda_mensual_mp(
     n_periodos: int = 12,
     date_from: Optional[str] = None,
     date_to:   Optional[str] = None

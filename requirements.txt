@@ -3,5 +3,6 @@ uvicorn
 scikit-learn
 pandas
 mysql-connector-python
+pymysql
 joblib
 sqlalchemy

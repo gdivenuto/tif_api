@@ -1,25 +1,30 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from model_utils import (
+
+from entrenar_modelos_ventas import (
     entrenar_modelo_regresion_lineal, 
     entrenar_modelo_regresion_logistica, 
     entrenar_modelo_arbol_decision, 
     entrenar_modelo_bosque_aleatorio,
 )
-from model_utils import (
+from modelo_consumo_mp import (
     entrenar_modelo_consumo_materia_prima,
     predecir_consumo_materia_prima,
 )
-from model_utils import (
-    predecir_por_cliente_id, 
+# from model_utils import (
+#     obtener_datos_para_entrenamiento,
+# )
+from predicciones_ventas import (
+    obtener_clientes_que_compraron, 
     predecir_con_modelo_lineal, 
     predecir_con_modelo_logistico, 
     predecir_con_modelo_arbol, 
     predecir_con_modelo_bosque,
+    predecir_por_cliente_id, 
 )
-from model_utils import (
-    obtener_clientes_para_proyeccion, 
-    forecast_demanda_mensual,
+from modelo_demanda_mensual_mp import forecast_demanda_mensual
+
+from monitoreo import (
     consumo_material_mensual,
     gasto_por_proveedor,
     top_materiales,
@@ -49,10 +54,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Endpoints ------------------------------------------------------
+
+# Para probar si la API se encuentra activa
 @app.get("/")
 def inicio():
     return {"mensaje": "API de modelos de AAS activa"}
 
+# Para el modelo de Consumo en Unidades de Materias Primas ---------------------
 @app.post("/entrenar_consumo_mp")
 def entrenar_consumo_mp(rango: RangoEntrenamiento):
     return entrenar_modelo_consumo_materia_prima(rango.date_from, rango.date_to)
@@ -61,7 +70,12 @@ def entrenar_consumo_mp(rango: RangoEntrenamiento):
 def predecir_consumo_mp():
     return predecir_consumo_materia_prima()
 
-# Endpoints para entrenamientos -----------------------------------------------------------------
+# Para el modelo de Demanda mensual de Materias Primas
+@app.get("/forecast_demanda_mp")
+def forecast_demanda_mp(periodos: int = 12, date_from: str = None, date_to: str = None):
+    return forecast_demanda_mensual(periodos, date_from, date_to)
+
+# Para entrenamientos -----------------------------------------------------------------
 @app.post("/entrenar_lineal")
 def entrenar_lineal(rango: RangoEntrenamiento):
     return entrenar_modelo_regresion_lineal(rango.date_from, rango.date_to)
@@ -78,11 +92,12 @@ def entrenar_arbol(rango: RangoEntrenamiento):
 def entrenar_bosque(rango: RangoEntrenamiento):
     return entrenar_modelo_bosque_aleatorio(rango.date_from, rango.date_to)
 
-# Endpoints para predicciones -----------------------------------------------------------------
+# Para predecir por un Cliente especifico -----------------------------------------------------------------
 @app.get("/predecir_por_cliente/{cliente_id}")
 def predecir_por_cliente(cliente_id: int):
     return predecir_por_cliente_id(cliente_id)
 
+# Para predicciones en Ventas -----------------------------------------------------------------
 @app.post("/predecir_lineal")
 def predecir_lineal(datos: DatosEntrada):
     return predecir_con_modelo_lineal(
@@ -119,16 +134,12 @@ def predecir_con_bosque(datos: DatosEntrada):
         datos.total_gastado
     )
 # -----------------------------------------------------------------
-# Proyección de ventas por Cliente
-@app.get("/clientes_para_proyeccion")
-def clientes_para_proyeccion():
-    return obtener_clientes_para_proyeccion()
+# Devuelve los Clientes que compraron, con su monto total gastado
+@app.get("/clientes_que_compraron")
+def clientes_que_compraron():
+    return obtener_clientes_que_compraron()
 
-@app.get("/forecast_demanda")
-def forecast_demanda(periodos: int = 12, date_from: str = None, date_to: str = None):
-    return forecast_demanda_mensual(periodos, date_from, date_to)
-
-# Endpoints para las Gráficas de Monitoreo -----------------------------------------------------------------
+# Para las Gráficas de Monitoreo -----------------------------------------------------------------
 @app.get("/chart/consumo_material_mensual")
 def chart_consumo_material_mensual():
     return consumo_material_mensual()
