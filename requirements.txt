@@ -6,3 +6,4 @@ mysql-connector-python
 pymysql
 joblib
 sqlalchemy
+cryptography

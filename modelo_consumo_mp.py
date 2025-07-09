@@ -15,7 +15,7 @@ from sklearn.metrics import (
     #mean_squared_error, # Raíz del error cuadrático medio (OBSOLETO)
     mean_absolute_error,
     mean_absolute_percentage_error,
-     median_absolute_error,
+    median_absolute_error,
     explained_variance_score
 )
 from sqlalchemy import text

@@ -11,6 +11,10 @@ from sklearn.metrics import (
     root_mean_squared_error, # Pérdida de regresión del error cuadrático medio
     mean_squared_error, # Raíz del error cuadrático medio (OBSOLETO)
     r2_score, # Coeficiente de determinación: función de puntuación de regresión R^2
+    mean_absolute_error,
+    mean_absolute_percentage_error,
+    median_absolute_error,
+    explained_variance_score,
     classification_report, # reporte con las principales métricas de clasificación
     accuracy_score, # proporción de aciertos global
     precision_score, # de los positivos predichos, cuántos son correctos
@@ -52,7 +56,7 @@ def _get_info_ventas(date_from: str = None, date_to: str = None) -> tuple[str, t
     """
     return sql, tuple(params)
 
-def entrenar_modelo_regresion_lineal(date_from=None, date_to=None) -> dict:
+def entrenar_modelo_venta_regresion_lineal(date_from=None, date_to=None) -> dict:
     """
     Entrena un LinearRegression sobre la variable binaria `volvera_comprar` y guarda el modelo.
     Si no hay datos o ocurre un error, devuelve un mensaje apropiado.
@@ -85,10 +89,14 @@ def entrenar_modelo_regresion_lineal(date_from=None, date_to=None) -> dict:
         modelo = LinearRegression()
         modelo.fit(X_train, y_train)
 
-        # Se evalua con métricas de regresión
+        # Se obtienen métricas
         y_pred = modelo.predict(X_test)
-        r2  = r2_score(y_test, y_pred)
-        rmse = root_mean_squared_error(y_test, y_pred)
+        r2    = r2_score(y_test, y_pred)
+        rmse  = root_mean_squared_error(y_test, y_pred)
+        mae   = mean_absolute_error(y_test, y_pred)
+        mape  = mean_absolute_percentage_error(y_test, y_pred)
+        medae = median_absolute_error(y_test, y_pred)
+        #ev   = explained_variance_score(y_test, y_pred)
 
         # Se guarda el modelo
         os.makedirs("modelos", exist_ok=True)
@@ -99,7 +107,11 @@ def entrenar_modelo_regresion_lineal(date_from=None, date_to=None) -> dict:
         return {
             "mensaje": "Modelo lineal entrenado y guardado correctamente.",
             "r2": round(r2, 3),
-            "rmse": round(rmse, 3)
+            "rmse": round(rmse, 3),
+            "mae":   round(mae,   3),
+            "mape":  round(mape,  3),
+            "medae": round(medae, 3),
+            #"explained_variance": round(ev, 3)
         }
 
     except Exception as e:

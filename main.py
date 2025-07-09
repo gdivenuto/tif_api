@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from entrenar_modelos_ventas import (
-    entrenar_modelo_regresion_lineal, 
+from entrenar_modelos_venta import (
+    entrenar_modelo_venta_regresion_lineal, 
     entrenar_modelo_regresion_logistica, 
     entrenar_modelo_arbol_decision, 
     entrenar_modelo_bosque_aleatorio,
@@ -75,10 +75,10 @@ def predecir_consumo_mp():
 def forecast_demanda_mp(periodos: int = 12, date_from: str = None, date_to: str = None):
     return forecast_demanda_mensual(periodos, date_from, date_to)
 
-# Para entrenamientos -----------------------------------------------------------------
+# Para entrenamientos de modelos de venta -----------------------------------------------------------------
 @app.post("/entrenar_lineal")
 def entrenar_lineal(rango: RangoEntrenamiento):
-    return entrenar_modelo_regresion_lineal(rango.date_from, rango.date_to)
+    return entrenar_modelo_venta_regresion_lineal(rango.date_from, rango.date_to)
 
 @app.post("/entrenar_logistico")
 def entrenar_logistico(rango: RangoEntrenamiento):
