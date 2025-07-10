@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from entrenar_modelos_venta import (
@@ -16,11 +16,12 @@ from modelo_consumo_mp import (
 # )
 from predicciones_ventas import (
     obtener_clientes_que_compraron, 
-    predecir_con_modelo_lineal, 
-    predecir_con_modelo_logistico, 
-    predecir_con_modelo_arbol, 
-    predecir_con_modelo_bosque,
-    predecir_por_cliente_id, 
+    predecir_ventas_futuras_por_cliente,
+    predecir_ventas_futuras,
+    predecir_ventas_con_modelo_lineal, 
+    predecir_ventas_con_modelo_logistico, 
+    predecir_ventas_con_modelo_arbol, 
+    predecir_ventas_con_modelo_bosque,
 )
 from modelo_demanda_mensual_mp import forecast_demanda_mensual
 
@@ -35,8 +36,8 @@ from pydantic import BaseModel
 from typing import Optional
 
 class RangoEntrenamiento(BaseModel):
-    date_from: Optional[str]  # ISO 'YYYY-MM-DD'
-    date_to:   Optional[str]
+    date_from: Optional[str] = None # ISO 'YYYY-MM-DD'
+    date_to:   Optional[str] = None
 
 class DatosEntrada(BaseModel):
     edad: int
@@ -76,8 +77,8 @@ def forecast_demanda_mp(periodos: int = 12, date_from: str = None, date_to: str 
     return forecast_demanda_mensual(periodos, date_from, date_to)
 
 # Para entrenamientos de modelos de venta -----------------------------------------------------------------
-@app.post("/entrenar_lineal")
-def entrenar_lineal(rango: RangoEntrenamiento):
+@app.post("/entrenar_ventas_lineal")
+def entrenar_ventas_lineal(rango: RangoEntrenamiento):
     return entrenar_modelo_venta_regresion_lineal(rango.date_from, rango.date_to)
 
 @app.post("/entrenar_logistico")
@@ -93,14 +94,22 @@ def entrenar_bosque(rango: RangoEntrenamiento):
     return entrenar_modelo_bosque_aleatorio(rango.date_from, rango.date_to)
 
 # Para predecir por un Cliente especifico -----------------------------------------------------------------
-@app.get("/predecir_por_cliente/{cliente_id}")
-def predecir_por_cliente(cliente_id: int):
-    return predecir_por_cliente_id(cliente_id)
+@app.get("/predecir_ventas_por_cliente/{cliente_id}")
+def predecir_ventas_por_cliente(cliente_id: int):
+    result = predecir_ventas_futuras_por_cliente(cliente_id)
+    if "error" in result:
+        raise HTTPException(status_code=404, detail=result["error"])
+    return result
+
+# Para todos los clientes
+@app.get("/predecir_ventas")
+def predecir_ventas():
+    return predecir_ventas_futuras()
 
 # Para predicciones en Ventas -----------------------------------------------------------------
-@app.post("/predecir_lineal")
-def predecir_lineal(datos: DatosEntrada):
-    return predecir_con_modelo_lineal(
+@app.post("/predecir_ventas_lineal")
+def predecir_ventas_lineal(datos: DatosEntrada):
+    return predecir_ventas_con_modelo_lineal(
         datos.edad,
         datos.cantidad_total_pedidos,
         datos.dias_desde_ultima_compra,
@@ -109,7 +118,7 @@ def predecir_lineal(datos: DatosEntrada):
 
 @app.post("/predecir_logistico")
 def predecir_logistico(datos: DatosEntrada):
-    return predecir_con_modelo_logistico(
+    return predecir_ventas_con_modelo_logistico(
         datos.edad,
         datos.cantidad_total_pedidos,
         datos.dias_desde_ultima_compra,
@@ -118,7 +127,7 @@ def predecir_logistico(datos: DatosEntrada):
 
 @app.post("/predecir_con_arbol")
 def predecir_con_arbol(datos: DatosEntrada):
-    return predecir_con_modelo_arbol(
+    return predecir_ventas_con_modelo_arbol(
         datos.edad,
         datos.cantidad_total_pedidos,
         datos.dias_desde_ultima_compra,
@@ -127,7 +136,7 @@ def predecir_con_arbol(datos: DatosEntrada):
 
 @app.post("/predecir_con_bosque")
 def predecir_con_bosque(datos: DatosEntrada):
-    return predecir_con_modelo_bosque(
+    return predecir_ventas_con_modelo_bosque(
         datos.edad,
         datos.cantidad_total_pedidos,
         datos.dias_desde_ultima_compra,

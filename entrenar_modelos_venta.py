@@ -26,7 +26,7 @@ from fastapi import HTTPException
 
 from db import conectar_db
 
-def _get_info_ventas(date_from: str = None, date_to: str = None) -> tuple[str, tuple]:
+def _get_info_ventas(date_from: Optional[str], date_to: Optional[str]) -> tuple[str, tuple]:
     filtro = []
     params = []
 
@@ -36,10 +36,8 @@ def _get_info_ventas(date_from: str = None, date_to: str = None) -> tuple[str, t
     if date_to:
         filtro.append("p.fecha <= %s")
         params.append(date_to)
-
-    where = ""
-    if filtro:
-        where = "WHERE " + " AND ".join(filtro)
+    
+    where = f"WHERE {' AND '.join(filtro)}" if filtro else ""
 
     sql = f"""
     SELECT 
@@ -56,10 +54,28 @@ def _get_info_ventas(date_from: str = None, date_to: str = None) -> tuple[str, t
     """
     return sql, tuple(params)
 
-def entrenar_modelo_venta_regresion_lineal(date_from=None, date_to=None) -> dict:
+def entrenar_modelo_venta_regresion_lineal(
+    date_from: Optional[str] = None,
+    date_to:   Optional[str] = None
+) -> dict:
     """
-    Entrena un LinearRegression sobre la variable binaria `volvera_comprar` y guarda el modelo.
-    Si no hay datos o ocurre un error, devuelve un mensaje apropiado.
+    Entrena un LinearRegression para estimar el gasto total de cada cliente
+    (variable continua) a partir de:
+      - edad
+      - cantidad_total_pedidos
+      - dias_desde_ultima_compra
+
+    Args:
+        date_from (str, optional): fecha mínima 'YYYY-MM-DD' para filtrar histórico.
+        date_to   (str, optional): fecha máxima 'YYYY-MM-DD' para filtrar histórico.
+
+    Returns:
+        dict: {
+          "mensaje": str,
+          "r2": float,     # coeficiente de determinación
+          "rmse": float    # raíz del error cuadrático medio
+        }
+        o bien: {"mensaje": "...", "error": "..."} o en caso de falta de datos.
     """
     engine = conectar_db()
     sql, params = _get_info_ventas(date_from, date_to)
@@ -67,13 +83,15 @@ def entrenar_modelo_venta_regresion_lineal(date_from=None, date_to=None) -> dict
 
     # Se verifica que haya datos
     if df.empty:
-        return {"mensaje": "No hay datos suficientes para entrenar el modelo lineal."}
+        return {"mensaje": "No hay datos suficientes para entrenar el modelo lineal de ventas."}
 
     # Se crea la variable objetivo, binaria, si(1) o no(0)
     df["volvera_comprar"] = df["dias_desde_ultima_compra"].apply(lambda x: 1 if x < 60 else 0)
 
-    X = df[['edad', 'cantidad_total_pedidos', 'dias_desde_ultima_compra', 'total_gastado']]
-    y = df['volvera_comprar']
+    # Features
+    X = df[['edad', 'cantidad_total_pedidos', 'dias_desde_ultima_compra']]
+    # Target
+    y = df['total_gastado']
 
     # Se verifica el tamaño mínimo para la división de datos de entrenamiento y de prueba
     if len(df) < 2:
@@ -100,12 +118,12 @@ def entrenar_modelo_venta_regresion_lineal(date_from=None, date_to=None) -> dict
 
         # Se guarda el modelo
         os.makedirs("modelos", exist_ok=True)
-        with open("modelos/modelo_lineal.pkl", "wb") as f:
+        with open("modelos/modelo_lineal_ventas.pkl", "wb") as f:
             pickle.dump(modelo, f)
         
         # Se devuelve la confirmación y se incluyen métricas
         return {
-            "mensaje": "Modelo lineal entrenado y guardado correctamente.",
+            "mensaje": "Modelo lineal de ventas entrenado y guardado correctamente.",
             "r2": round(r2, 3),
             "rmse": round(rmse, 3),
             "mae":   round(mae,   3),
@@ -116,7 +134,7 @@ def entrenar_modelo_venta_regresion_lineal(date_from=None, date_to=None) -> dict
 
     except Exception as e:
         return {
-            "mensaje": "El modelo lineal no se ha podido entrenar ni guardar correctamente.",
+            "mensaje": "Error al entrenar o guardar el modelo de ventas.",
             "error": str(e)
         }
 
