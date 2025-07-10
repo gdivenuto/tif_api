@@ -1,12 +1,65 @@
 import pandas as pd
 
 from sqlalchemy import text
-
+from typing import Optional
 from db import conectar_db
 
 # Funciones para Monitoreo
 # --------------------------------------------------------------------
-def consumo_material_mensual() -> dict:
+def consumo_material_mensual(
+    categoria_id: Optional[int] = None
+) -> dict:
+    """
+    Retorna datos para un gráfico de líneas con el consumo mensual de cada materia prima.
+    Si `categoria_id` se pasa, filtra por esa categoría; si no, incluye todas las categorías.
+    """
+    engine = conectar_db()
+    filtros = []
+    params = {}
+
+    if categoria_id is not None:
+        filtros.append("mp.categoria_id = :cat_id")
+        params["cat_id"] = categoria_id
+
+    where = f"WHERE {' AND '.join(filtros)}" if filtros else ""
+
+    sql = f"""
+        SELECT 
+          DATE_FORMAT(c.fecha, '%Y-%m') AS mes,
+          mp.nombre AS materia_prima_nombre,
+          SUM(dc.cantidad) AS total_unidades
+        FROM compras c
+        JOIN detalle_compra dc 
+          ON c.id = dc.compra_id
+        JOIN materias_primas mp 
+          ON dc.materia_prima_id = mp.id
+        {where}
+        GROUP BY mes, mp.nombre
+        ORDER BY mes
+    """
+
+    df = pd.read_sql(text(sql), con=engine, params=params)
+
+    if df.empty:
+        return {"labels": [], "datasets": []}
+
+    pivot = df.pivot_table(
+        index="mes",
+        columns="materia_prima_nombre",
+        values="total_unidades",
+        aggfunc="sum",
+        fill_value=0
+    )
+
+    return {
+        "labels": pivot.index.tolist(),
+        "datasets": [
+            {"label": materia, "data": pivot[materia].tolist()}
+            for materia in pivot.columns
+        ]
+    }
+
+def consumo_material_mensual_old() -> dict:
     """
     Retorna datos para un gráfico de líneas con el consumo mensual de cada materia prima.
     """

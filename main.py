@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from entrenar_modelos_venta import (
@@ -150,8 +150,14 @@ def clientes_que_compraron():
 
 # Para las Gráficas de Monitoreo -----------------------------------------------------------------
 @app.get("/chart/consumo_material_mensual")
-def chart_consumo_material_mensual():
-    return consumo_material_mensual()
+def chart_consumo_material_mensual(
+    categoria_id: Optional[int] = Query(
+        None,
+        title="ID de categoría",
+        description="Si se utiliza, filtra la materia prima por dicha categoría."
+    )
+):
+    return consumo_material_mensual(categoria_id)
 
 @app.get("/chart/gasto_por_proveedor")
 def chart_gasto_por_proveedor():
