@@ -21,6 +21,7 @@ def consumo_material_mensual() -> dict:
           ON c.id = dc.compra_id
         JOIN materias_primas mp 
           ON dc.materia_prima_id = mp.id
+        WHERE mp.categoria_id = 7
         GROUP BY mes, mp.nombre
         ORDER BY mes
     """
