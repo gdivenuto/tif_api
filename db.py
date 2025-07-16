@@ -4,7 +4,7 @@ from sqlalchemy.engine import Engine
 # Parámetros de conexión
 HOST     = "localhost"
 USER     = "root"
-PASSWORD = "jamoncrudo"
+PASSWORD = "gabilan"
 DBNAME   = "uaa_tif"
 
 # URL de SQLAlchemy

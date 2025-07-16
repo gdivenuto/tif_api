@@ -24,7 +24,7 @@ def forecast_demanda_mensual(
     Returns:
         dict: {
             "historico": List[{"mes": "YYYY-MM", "demanda": float}],
-            "forecast":   List[{"mes": "YYYY-MM", "demanda": float}]
+            "forecast":  List[{"mes": "YYYY-MM", "demanda": float}]
         }
     """
     engine = conectar_db()
@@ -36,6 +36,7 @@ def forecast_demanda_mensual(
     if date_to:
         filtros.append("c.fecha <= :date_to")
         params["date_to"] = date_to
+    
     where = f"WHERE {' AND '.join(filtros)}" if filtros else ""
 
     sql = text(f"""
