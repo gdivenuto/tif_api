@@ -38,11 +38,12 @@ def _get_info_ventas(date_from: Optional[str], date_to: Optional[str]) -> tuple[
         params.append(date_to)
     
     where = f"WHERE {' AND '.join(filtro)}" if filtro else ""
-
+    # c.edad,
+    # , c.edad
     sql = f"""
     SELECT 
         c.id AS cliente_id,
-        c.edad,
+        
         COUNT(DISTINCT p.id) AS cantidad_total_pedidos,
         DATEDIFF(CURDATE(), MAX(p.fecha)) AS dias_desde_ultima_compra,
         SUM(dp.cantidad * dp.precio_unitario - dp.descuento) AS total_gastado
@@ -50,7 +51,7 @@ def _get_info_ventas(date_from: Optional[str], date_to: Optional[str]) -> tuple[
     JOIN pedidos p ON c.id = p.cliente_id
     JOIN detalle_pedido dp ON p.id = dp.pedido_id
     {where}
-    GROUP BY c.id, c.edad
+    GROUP BY c.id
     """
     return sql, tuple(params)
 
@@ -59,8 +60,8 @@ def entrenar_modelo_venta_regresion_lineal(
     date_to:   Optional[str] = None
 ) -> dict:
     """
-    Entrena un LinearRegression para estimar el gasto total de cada cliente
-    (variable continua) a partir de:
+    Entrena un LinearRegression para estimar el total gastado de cada cliente (variable continua) 
+    A partir de:
       - edad
       - cantidad_total_pedidos
       - dias_desde_ultima_compra
@@ -72,10 +73,12 @@ def entrenar_modelo_venta_regresion_lineal(
     Returns:
         dict: {
           "mensaje": str,
-          "r2": float,     # coeficiente de determinación
-          "rmse": float    # raíz del error cuadrático medio
+          "r2": float,    # Coeficiente de determinación
+          "rmse": float,  # Raíz del Error Cuadrático Medio
+          "mae": float,   # Error Medio Absoluto
+          "mape": float,  # Error Porcentual Absoluto Medio
+          "medae": float, # Mediana del Error Absoluto
         }
-        o bien: {"mensaje": "...", "error": "..."} o en caso de falta de datos.
     """
     engine = conectar_db()
     sql, params = _get_info_ventas(date_from, date_to)
@@ -89,7 +92,7 @@ def entrenar_modelo_venta_regresion_lineal(
     df["volvera_comprar"] = df["dias_desde_ultima_compra"].apply(lambda x: 1 if x < 60 else 0)
 
     # Features
-    X = df[['edad', 'cantidad_total_pedidos', 'dias_desde_ultima_compra']]
+    X = df[['cantidad_total_pedidos', 'dias_desde_ultima_compra']]#'edad', 
     # Target
     y = df['total_gastado']
 
