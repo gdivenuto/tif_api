@@ -1,3 +1,4 @@
+import math
 import pickle
 import os
 import pandas as pd
@@ -8,18 +9,17 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import (
-    root_mean_squared_error, # Pérdida de regresión del error cuadrático medio
-    mean_squared_error, # Raíz del error cuadrático medio (OBSOLETO)
-    r2_score, # Coeficiente de determinación: función de puntuación de regresión R^2
-    mean_absolute_error,
-    mean_absolute_percentage_error,
-    median_absolute_error,
-    explained_variance_score,
-    classification_report, # reporte con las principales métricas de clasificación
-    accuracy_score, # proporción de aciertos global
-    precision_score, # de los positivos predichos, cuántos son correctos
-    recall_score, # sensibilidad de los positivos reales, cuántos se aciertan
-    f1_score, # media armónica de precision y recall
+    r2_score, # Coeficiente de determinación, función de puntuación de regresión R^2
+    mean_squared_error, # Error cuadrático medio
+    root_mean_squared_error, # Raíz del error cuadrático medio
+    mean_absolute_error, # Error absoluto medio
+    mean_absolute_percentage_error, # Error porcentual absoluto medio
+    median_absolute_error, # Desviación absoluta mediana
+    classification_report, # Reporte con las principales métricas de clasificación
+    accuracy_score, # Proporción de aciertos global
+    precision_score, # Puntuación de los positivos predichos, cuántos son correctos
+    recall_score, # Sensibilidad de los positivos reales, cuántos se aciertan
+    f1_score, # Media armónica de precision y recall
 )
 from sqlalchemy import text
 from fastapi import HTTPException
@@ -38,12 +38,11 @@ def _get_info_ventas(date_from: Optional[str], date_to: Optional[str]) -> tuple[
         params.append(date_to)
     
     where = f"WHERE {' AND '.join(filtro)}" if filtro else ""
-    # c.edad,
-    # , c.edad
+
     sql = f"""
     SELECT 
         c.id AS cliente_id,
-        
+        c.edad,
         COUNT(DISTINCT p.id) AS cantidad_total_pedidos,
         DATEDIFF(CURDATE(), MAX(p.fecha)) AS dias_desde_ultima_compra,
         SUM(dp.cantidad * dp.precio_unitario - dp.descuento) AS total_gastado
@@ -51,7 +50,7 @@ def _get_info_ventas(date_from: Optional[str], date_to: Optional[str]) -> tuple[
     JOIN pedidos p ON c.id = p.cliente_id
     JOIN detalle_pedido dp ON p.id = dp.pedido_id
     {where}
-    GROUP BY c.id
+    GROUP BY c.id , c.edad
     """
     return sql, tuple(params)
 
@@ -74,6 +73,7 @@ def entrenar_modelo_venta_regresion_lineal(
         dict: {
           "mensaje": str,
           "r2": float,    # Coeficiente de determinación
+          "mse": float,   # Error Cuadrático Medio
           "rmse": float,  # Raíz del Error Cuadrático Medio
           "mae": float,   # Error Medio Absoluto
           "mape": float,  # Error Porcentual Absoluto Medio
@@ -88,11 +88,8 @@ def entrenar_modelo_venta_regresion_lineal(
     if df.empty:
         return {"mensaje": "No hay datos suficientes para entrenar el modelo lineal de ventas."}
 
-    # Se crea la variable objetivo, binaria, si(1) o no(0)
-    df["volvera_comprar"] = df["dias_desde_ultima_compra"].apply(lambda x: 1 if x < 60 else 0)
-
     # Features
-    X = df[['cantidad_total_pedidos', 'dias_desde_ultima_compra']]#'edad', 
+    X = df[['edad', 'cantidad_total_pedidos', 'dias_desde_ultima_compra']]
     # Target
     y = df['total_gastado']
 
@@ -110,14 +107,16 @@ def entrenar_modelo_venta_regresion_lineal(
         modelo = LinearRegression()
         modelo.fit(X_train, y_train)
 
-        # Se obtienen métricas
+        # Se predice
         y_pred = modelo.predict(X_test)
+
+        # Se obtienen métricas
         r2    = r2_score(y_test, y_pred)
-        rmse  = root_mean_squared_error(y_test, y_pred)
+        mse   = mean_squared_error(y_test, y_pred)
+        rmse  = root_mean_squared_error(y_test, y_pred) # math.sqrt(mse)
         mae   = mean_absolute_error(y_test, y_pred)
         mape  = mean_absolute_percentage_error(y_test, y_pred)
         medae = median_absolute_error(y_test, y_pred)
-        #ev   = explained_variance_score(y_test, y_pred)
 
         # Se guarda el modelo
         os.makedirs("modelos", exist_ok=True)
@@ -128,11 +127,11 @@ def entrenar_modelo_venta_regresion_lineal(
         return {
             "mensaje": "Modelo lineal de ventas entrenado y guardado correctamente.",
             "r2": round(r2, 3),
+            "mse": round(mse, 3),
             "rmse": round(rmse, 3),
             "mae":   round(mae,   3),
             "mape":  round(mape,  3),
-            "medae": round(medae, 3),
-            #"explained_variance": round(ev, 3)
+            "medae": round(medae, 3)
         }
 
     except Exception as e:
@@ -141,6 +140,7 @@ def entrenar_modelo_venta_regresion_lineal(
             "error": str(e)
         }
 
+# NO utilizados ------------------------
 def entrenar_modelo_regresion_logistica(date_from=None, date_to=None) -> dict:
     """
     Entrena un modelo de regresión logística para predecir volvera_comprar (0/1),
