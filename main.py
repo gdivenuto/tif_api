@@ -7,6 +7,9 @@ from entrenar_modelos_venta import (
     entrenar_modelo_arbol_decision, 
     entrenar_modelo_bosque_aleatorio,
 )
+
+from entrenar_modelo_compra import entrenar_modelo_demanda_mensual_mp
+
 from modelo_consumo_mp import (
     entrenar_modelo_consumo_materia_prima,
     predecir_consumo_materia_prima,
@@ -61,6 +64,11 @@ app.add_middleware(
 @app.get("/")
 def inicio():
     return {"mensaje": "API de modelos de AAS activa"}
+
+# Para el NUEVO modelo de demanda mensual de MP
+@app.post("/entrenar_demanda_mensual_mp")
+def entrenar_demanda_mensual_mp(rango: RangoEntrenamiento):
+    return entrenar_modelo_demanda_mensual_mp(rango.date_from, rango.date_to)
 
 # Para el modelo de Consumo en Unidades de Materias Primas ---------------------
 @app.post("/entrenar_consumo_mp")

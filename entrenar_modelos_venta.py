@@ -79,6 +79,7 @@ def entrenar_modelo_venta_regresion_lineal(
           "mape": float,  # Error Porcentual Absoluto Medio
           "medae": float, # Mediana del Error Absoluto
         }
+        o un mensaje en caso de no haber datos.
     """
     engine = conectar_db()
     sql, params = _get_info_ventas(date_from, date_to)

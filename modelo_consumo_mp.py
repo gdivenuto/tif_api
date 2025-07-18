@@ -11,15 +11,12 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import (
     r2_score, # Coeficiente de determinación: función de puntuación de regresión R^2
-    root_mean_squared_error, # Pérdida de regresión del error cuadrático medio
-    #mean_squared_error, # Raíz del error cuadrático medio (OBSOLETO)
-    mean_absolute_error,
-    mean_absolute_percentage_error,
-    median_absolute_error,
-    explained_variance_score
+    mean_squared_error, # Error cuadrático medio
+    root_mean_squared_error, # Raíz del error cuadrático medio
+    mean_absolute_error, # Error absoluto medio
+    mean_absolute_percentage_error, # Error porcentual absoluto medio
+    median_absolute_error, # Desviación absoluta mediana
 )
-from sqlalchemy import text
-from fastapi import HTTPException
 
 from db import conectar_db
 
@@ -39,6 +36,7 @@ def entrenar_modelo_consumo_materia_prima(
         dict: {
             "mensaje": str,
             "r2": float,    # coeficiente de determinación
+            "mse": float,   # error cuadrático medio
             "rmse": float   # raíz del error cuadrático medio
         }
         o un mensaje en caso de no haber datos.
@@ -95,13 +93,12 @@ def entrenar_modelo_consumo_materia_prima(
         #y_pred = modelo.predict(X_test)
 
         # Se obtienen métricas
-        r2   = r2_score(y_test, y_pred)
-        rmse = root_mean_squared_error(y_test, y_pred)
-        #rmse  = mean_squared_error(y_test, y_pred, squared=False) (Función obsoleta)
+        r2    = r2_score(y_test, y_pred)
+        mse   = mean_squared_error(y_test, y_pred)
+        rmse  = root_mean_squared_error(y_test, y_pred)
         mae   = mean_absolute_error(y_test, y_pred)
         mape  = mean_absolute_percentage_error(y_test, y_pred)
         medae = median_absolute_error(y_test, y_pred)
-        #ev    = explained_variance_score(y_test, y_pred)
 
         # Se guarda el modelo
         os.makedirs("modelos", exist_ok=True)
@@ -111,11 +108,11 @@ def entrenar_modelo_consumo_materia_prima(
         return {
             "mensaje": "El modelo de consumo de materias primas se ha entrenado y guardado correctamente.",
             "r2": round(r2, 3),
+            "mse": round(mse, 3),
             "rmse": round(rmse, 3),
             "mae":   round(mae,   3),
             "mape":  round(mape,  3),
-            "medae": round(medae, 3),
-            #"explained_variance": round(ev, 3)
+            "medae": round(medae, 3)
         }
     except Exception as e:
         return {
