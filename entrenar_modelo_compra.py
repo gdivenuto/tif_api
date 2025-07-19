@@ -3,6 +3,7 @@ import numpy as np
 import os
 import pickle
 
+from typing import Optional
 from fastapi import Query
 from sqlalchemy import text
 from sklearn.ensemble import RandomForestRegressor
@@ -17,8 +18,8 @@ from db import conectar_db
 
 def entrenar_modelo_demanda_mensual_mp(
     n_periodos: int = Query(12, description="Número de meses a predecir"),
-    date_from: str | None = None,
-    date_to:   str | None = None
+    date_from: Optional[str] = None,
+    date_to:   Optional[str] = None
 ) -> dict:
     """
     Genera un forecast de demanda mensual optimizado usando RandomForestRegressor
@@ -80,7 +81,17 @@ def entrenar_modelo_demanda_mensual_mp(
     # Lags
     df['lag_1'] = df['demanda'].shift(1)
     df['lag_12'] = df['demanda'].shift(12)
+
     df = df.dropna().reset_index(drop=True)
+
+    if len(df) <= n_periodos:
+        return {
+            "mensaje": "No hay datos suficientes tras procesar las características de series temporales.",
+            "historico": [],
+            "forecast": [],
+            "r2": None,
+            "rmse": None
+        }
 
     # Se separa en histórico y en test temporal
     train = df.iloc[:-n_periodos]
@@ -106,8 +117,8 @@ def entrenar_modelo_demanda_mensual_mp(
     # Forecast futuros
     last_month = df['mes'].max()
     future_idx = pd.date_range(
-        start=last_month + pd.offsets.MonthBegin(),
-        periods=n_periodos,
+        start = last_month + pd.offsets.MonthBegin(),
+        periods = n_periodos,
         freq='MS'
     )
     future = pd.DataFrame({
@@ -136,7 +147,7 @@ def entrenar_modelo_demanda_mensual_mp(
 
     # Se guarda el modelo
     os.makedirs('modelos', exist_ok=True)
-    with open('modelos/modelo_demanda.pkl', 'wb') as f:
+    with open('modelos/modelo_demanda_mensual_mp.pkl', 'wb') as f:
         pickle.dump(pipeline, f)
 
     return {

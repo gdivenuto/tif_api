@@ -103,7 +103,7 @@ def entrenar_modelo_consumo_materia_prima(
         # Se guarda el modelo
         os.makedirs("modelos", exist_ok=True)
         with open("modelos/modelo_consumo_mp.pkl", "wb") as f:
-            pickle.dump(pipeline, f) # se reemplazó modelo por el pipeline
+            pickle.dump(pipeline, f) # se reemplazó `modelo` por el pipeline
 
         return {
             "mensaje": "El modelo de consumo de materias primas se ha entrenado y guardado correctamente.",

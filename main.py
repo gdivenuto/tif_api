@@ -67,8 +67,12 @@ def inicio():
 
 # Para el NUEVO modelo de demanda mensual de MP
 @app.post("/entrenar_demanda_mensual_mp")
-def entrenar_demanda_mensual_mp(rango: RangoEntrenamiento):
-    return entrenar_modelo_demanda_mensual_mp(rango.date_from, rango.date_to)
+def entrenar_demanda_mensual_mp(
+    n_periodos: int = Query(12, title="Meses a predecir"),
+    date_from: Optional[str] = Query(None, title="Fecha inicio 'YYYY-MM-DD'"),
+    date_to:   Optional[str] = Query(None, title="Fecha fin 'YYYY-MM-DD'")
+):
+    return entrenar_modelo_demanda_mensual_mp(n_periodos, date_from, date_to)
 
 # Para el modelo de Consumo en Unidades de Materias Primas ---------------------
 @app.post("/entrenar_consumo_mp")
@@ -79,7 +83,7 @@ def entrenar_consumo_mp(rango: RangoEntrenamiento):
 def predecir_consumo_mp():
     return predecir_consumo_materia_prima()
 
-# Para el modelo de Demanda mensual de Materias Primas
+# Para el Pronóstico de Demanda mensual de Materias Primas
 @app.get("/forecast_demanda_mp")
 def forecast_demanda_mp(periodos: int = 12, date_from: str = None, date_to: str = None):
     return forecast_demanda_mensual(periodos, date_from, date_to)
