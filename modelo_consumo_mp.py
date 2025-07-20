@@ -70,27 +70,33 @@ def entrenar_modelo_consumo_materia_prima(
 
     try:
         # Se define un pipeline
-        numeric_features = ["year", "month"]
-        cat_features     = ["materia_prima_id"]
-        preprocessor = ColumnTransformer([
-            ("num", StandardScaler(), numeric_features),
-            ("cat", OneHotEncoder(handle_unknown="ignore"), cat_features)
-        ])
-        pipeline = Pipeline([
-            ("prep", preprocessor),
-            ("rf", RandomForestRegressor(random_state=42))
-        ])
+        # numeric_features = ["year", "month"]
+        # cat_features     = ["materia_prima_id"]
+        # preprocessor = ColumnTransformer([
+        #     ("num", StandardScaler(), numeric_features),
+        #     ("cat", OneHotEncoder(handle_unknown="ignore"), cat_features)
+        # ])
+        # pipeline = Pipeline([
+        #     ("prep", preprocessor),
+        #     ("rf", RandomForestRegressor(random_state=42))
+        # ])
 
-        # Split y entrenamiento
+        # Se dividen los datos en entrenamiento y test
+        # Utilizando el 20% para test
+        # random_state: semilla para que los resultados sean reproducibles. Tiene que ser un valor entero.
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=0.2, random_state=42
         )
-        # modelo = RandomForestRegressor(n_estimators=100, random_state=42)
-        # modelo.fit(X_train, y_train)
+        
+        # n_estimators: número de árboles de decisión.
+        modelo = RandomForestRegressor(n_estimators=100, random_state=42)
+        
+        # Se entrena el modelo
+        modelo.fit(X_train, y_train)
 
-        pipeline.fit(X_train, y_train)
-        y_pred = pipeline.predict(X_test)
-        #y_pred = modelo.predict(X_test)
+        #pipeline.fit(X_train, y_train)
+        #y_pred = pipeline.predict(X_test)
+        y_pred = modelo.predict(X_test)
 
         # Se obtienen métricas
         r2    = r2_score(y_test, y_pred)
@@ -103,15 +109,15 @@ def entrenar_modelo_consumo_materia_prima(
         # Se guarda el modelo
         os.makedirs("modelos", exist_ok=True)
         with open("modelos/modelo_consumo_mp.pkl", "wb") as f:
-            pickle.dump(pipeline, f) # se reemplazó `modelo` por el pipeline
+            pickle.dump(modelo, f) # se reemplazó `modelo` por el pipeline
 
         return {
             "mensaje": "El modelo de consumo de materias primas se ha entrenado y guardado correctamente.",
             "r2": round(r2, 3),
             "mse": round(mse, 3),
             "rmse": round(rmse, 3),
-            "mae":   round(mae,   3),
-            "mape":  round(mape,  3),
+            "mae":   round(mae, 3),
+            "mape":  round(mape, 3),
             "medae": round(medae, 3)
         }
     except Exception as e:
