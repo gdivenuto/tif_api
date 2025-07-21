@@ -69,33 +69,25 @@ def entrenar_modelo_consumo_materia_prima(
     y = df["consumo"]
 
     try:
-        # Se define un pipeline
-        # numeric_features = ["year", "month"]
-        # cat_features     = ["materia_prima_id"]
-        # preprocessor = ColumnTransformer([
-        #     ("num", StandardScaler(), numeric_features),
-        #     ("cat", OneHotEncoder(handle_unknown="ignore"), cat_features)
-        # ])
-        # pipeline = Pipeline([
-        #     ("prep", preprocessor),
-        #     ("rf", RandomForestRegressor(random_state=42))
-        # ])
-
         # Se dividen los datos en entrenamiento y test
-        # Utilizando el 20% para test
-        # random_state: semilla para que los resultados sean reproducibles. Tiene que ser un valor entero.
         X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=42
+            X, # Features (variables de entrada: año, mes y el Id de la MP)
+            y, # Target (el consumo estimado de MP)
+            test_size    = 0.2, # Utilizando el 20% para test
+            random_state = 42 # semilla para que los resultados sean reproducibles
         )
-        
-        # n_estimators: número de árboles de decisión.
-        modelo = RandomForestRegressor(n_estimators=100, random_state=42)
-        
+
+        # Se define el modelo
+        modelo = RandomForestRegressor(
+            n_estimators = 100, # número de árboles incluidos en el modelo
+            max_depth    = 2,   # profundidad máxima que pueden alcanzar los árboles
+            random_state = 42   # semilla para que los resultados sean reproducibles
+        )
+
         # Se entrena el modelo
         modelo.fit(X_train, y_train)
 
-        #pipeline.fit(X_train, y_train)
-        #y_pred = pipeline.predict(X_test)
+        # Se predice
         y_pred = modelo.predict(X_test)
 
         # Se obtienen métricas
@@ -109,7 +101,7 @@ def entrenar_modelo_consumo_materia_prima(
         # Se guarda el modelo
         os.makedirs("modelos", exist_ok=True)
         with open("modelos/modelo_consumo_mp.pkl", "wb") as f:
-            pickle.dump(modelo, f) # se reemplazó `modelo` por el pipeline
+            pickle.dump(modelo, f)
 
         return {
             "mensaje": "El modelo de consumo de materias primas se ha entrenado y guardado correctamente.",
@@ -158,6 +150,7 @@ def predecir_consumo_materia_prima() -> dict:
         FROM detalle_compra dc
         JOIN materias_primas mp
           ON dc.materia_prima_id = mp.id
+        ORDER BY materia_prima_nombre
     """, con=engine)
 
     if mp_df.empty:

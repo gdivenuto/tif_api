@@ -118,6 +118,7 @@ def predecir_ventas_futuras() -> dict:
     JOIN pedidos p ON c.id = p.cliente_id
     JOIN detalle_pedido dp ON p.id = dp.pedido_id
     GROUP BY c.id, c.nombre, c.apellido, c.edad
+    ORDER BY nombre
     """
     df = pd.read_sql(text(sql), con=engine)
 
