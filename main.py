@@ -1,22 +1,22 @@
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Optional
 
+# Entrenamiento y predicción de Compras
+# --------------------------------------------------------------
+from entrenar_modelo_consumo_mp import entrenar_modelo_consumo_materia_prima
+from predecir_consumo_mp import predecir_consumo_materia_prima
+from predecir_demanda_mensual_mp import forecast_demanda_mensual
+
+# Entrenamiento y predicción de Ventas
+# --------------------------------------------------------------
 from entrenar_modelos_venta import (
     entrenar_modelo_venta_regresion_lineal, 
     entrenar_modelo_regresion_logistica, 
     entrenar_modelo_arbol_decision, 
     entrenar_modelo_bosque_aleatorio,
 )
-
-from entrenar_modelo_compra import entrenar_modelo_demanda_mensual_mp
-
-from modelo_consumo_mp import (
-    entrenar_modelo_consumo_materia_prima,
-    predecir_consumo_materia_prima,
-)
-# from model_utils import (
-#     obtener_datos_para_entrenamiento,
-# )
 from predicciones_ventas import (
     obtener_clientes_que_compraron, 
     predecir_ventas_futuras_por_cliente,
@@ -26,8 +26,9 @@ from predicciones_ventas import (
     predecir_ventas_con_modelo_arbol, 
     predecir_ventas_con_modelo_bosque,
 )
-from modelo_demanda_mensual_mp import forecast_demanda_mensual
 
+# Para las Gráficas de Monitoreo
+# --------------------------------------------------------------
 from monitoreo import (
     consumo_material_mensual,
     gasto_por_proveedor,
@@ -35,8 +36,6 @@ from monitoreo import (
     uso_por_color,
     dispersion_precio_cantidad,
 )
-from pydantic import BaseModel
-from typing import Optional
 
 class RangoEntrenamiento(BaseModel):
     date_from: Optional[str] = None # ISO 'YYYY-MM-DD'
@@ -57,22 +56,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 # Endpoints ------------------------------------------------------
-
+# ----------------------------------------------------------------
 # Para probar si la API se encuentra activa
 @app.get("/")
 def inicio():
     return {"mensaje": "API de modelos de AAS activa"}
-
-# Para el NUEVO modelo de demanda mensual de MP
-@app.post("/entrenar_demanda_mensual_mp")
-def entrenar_demanda_mensual_mp(
-    n_periodos: int = Query(12, title="Meses a predecir"),
-    date_from: Optional[str] = Query(None, title="Fecha inicio 'YYYY-MM-DD'"),
-    date_to:   Optional[str] = Query(None, title="Fecha fin 'YYYY-MM-DD'")
-):
-    return entrenar_modelo_demanda_mensual_mp(n_periodos, date_from, date_to)
 
 # Para el modelo de Consumo en Unidades de Materias Primas ---------------------
 @app.post("/entrenar_consumo_mp")
@@ -88,7 +77,7 @@ def predecir_consumo_mp():
 def forecast_demanda_mp(periodos: int = 12, date_from: str = None, date_to: str = None):
     return forecast_demanda_mensual(periodos, date_from, date_to)
 
-# Para entrenamientos de modelos de venta -----------------------------------------------------------------
+# Para entrenamientos de modelos de venta -----------------------------------------------
 @app.post("/entrenar_ventas_lineal")
 def entrenar_ventas_lineal(rango: RangoEntrenamiento):
     return entrenar_modelo_venta_regresion_lineal(rango.date_from, rango.date_to)
@@ -105,7 +94,7 @@ def entrenar_arbol(rango: RangoEntrenamiento):
 def entrenar_bosque(rango: RangoEntrenamiento):
     return entrenar_modelo_bosque_aleatorio(rango.date_from, rango.date_to)
 
-# Para predecir por un Cliente especifico -----------------------------------------------------------------
+# Para predecir por un Cliente especifico ------------------------------------------------
 @app.get("/predecir_ventas_por_cliente/{cliente_id}")
 def predecir_ventas_por_cliente(cliente_id: int):
     result = predecir_ventas_futuras_por_cliente(cliente_id)
@@ -118,7 +107,7 @@ def predecir_ventas_por_cliente(cliente_id: int):
 def predecir_ventas():
     return predecir_ventas_futuras()
 
-# Para predicciones en Ventas -----------------------------------------------------------------
+# Para predicciones en Ventas ------------------------------------------------------------
 @app.post("/predecir_ventas_lineal")
 def predecir_ventas_lineal(datos: DatosEntrada):
     return predecir_ventas_con_modelo_lineal(
@@ -160,7 +149,7 @@ def predecir_con_bosque(datos: DatosEntrada):
 def clientes_que_compraron():
     return obtener_clientes_que_compraron()
 
-# Para las Gráficas de Monitoreo -----------------------------------------------------------------
+# Para las Gráficas de Monitoreo -----------------------------------
 @app.get("/chart/consumo_material_mensual")
 def chart_consumo_material_mensual(
     categoria_id: Optional[int] = Query(
