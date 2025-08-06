@@ -11,12 +11,14 @@ from predecir_demanda_mensual_mp import forecast_demanda_mensual
 
 # Entrenamiento y predicción de Ventas
 # --------------------------------------------------------------
-from entrenar_modelos_venta import (
-    entrenar_modelo_venta_regresion_lineal, 
-    entrenar_modelo_regresion_logistica, 
-    entrenar_modelo_arbol_decision, 
-    entrenar_modelo_bosque_aleatorio,
-)
+# from entrenar_modelos_venta import (
+#     entrenar_modelo_venta_regresion_lineal, 
+#     entrenar_modelo_regresion_logistica, 
+#     entrenar_modelo_arbol_decision, 
+#     entrenar_modelo_bosque_aleatorio,
+# )
+from entrenar_modelo_venta_v2 import entrenar_modelo_venta_regresion_lineal
+
 from predicciones_ventas import (
     obtener_clientes_que_compraron, 
     predecir_ventas_futuras_por_cliente,
@@ -82,17 +84,17 @@ def forecast_demanda_mp(periodos: int = 12, date_from: str = None, date_to: str 
 def entrenar_ventas_lineal(rango: RangoEntrenamiento):
     return entrenar_modelo_venta_regresion_lineal(rango.date_from, rango.date_to)
 
-@app.post("/entrenar_logistico")
-def entrenar_logistico(rango: RangoEntrenamiento):
-    return entrenar_modelo_regresion_logistica(rango.date_from, rango.date_to)
+# @app.post("/entrenar_logistico")
+# def entrenar_logistico(rango: RangoEntrenamiento):
+#     return entrenar_modelo_regresion_logistica(rango.date_from, rango.date_to)
 
-@app.post("/entrenar_arbol")
-def entrenar_arbol(rango: RangoEntrenamiento):
-    return entrenar_modelo_arbol_decision(rango.date_from, rango.date_to)
+# @app.post("/entrenar_arbol")
+# def entrenar_arbol(rango: RangoEntrenamiento):
+#     return entrenar_modelo_arbol_decision(rango.date_from, rango.date_to)
 
-@app.post("/entrenar_bosque")
-def entrenar_bosque(rango: RangoEntrenamiento):
-    return entrenar_modelo_bosque_aleatorio(rango.date_from, rango.date_to)
+# @app.post("/entrenar_bosque")
+# def entrenar_bosque(rango: RangoEntrenamiento):
+#     return entrenar_modelo_bosque_aleatorio(rango.date_from, rango.date_to)
 
 # Para predecir por un Cliente especifico ------------------------------------------------
 @app.get("/predecir_ventas_por_cliente/{cliente_id}")
