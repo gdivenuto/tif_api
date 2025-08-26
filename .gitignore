@@ -25,10 +25,6 @@ build/
 *.sqlite3
 *.log
 
-# Modelos entrenados
-modelos/*.pkl
-modelos/*.joblib
-
 # Archivos del sistema o editores
 .DS_Store
 Thumbs.db
