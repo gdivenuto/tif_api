@@ -65,6 +65,7 @@ tif_api/
 ├── predecir_demanda_mensual_mp.py  # Se utiliza el modelo de compras para predecir la demanda mensual de materias primas.
 ├── predicciones_ventas.py          # Se utiliza el modelo de ventas para realizar diversas predicciones.
 └── requirements.txt                # Contiene las dependencias del proyecto para la API.
+```
 
 ## Iniciar la API para su uso
 ### Activar el entorno virtual
