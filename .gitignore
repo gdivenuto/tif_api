@@ -34,3 +34,9 @@ Thumbs.db
 # Archivos temporales o backup
 *.bak
 *.tmp
+
+# No utilizado
+iniciar_servidor_api.sh
+
+# Directorio de los modelos creados y entrenados
+!/modelos/*

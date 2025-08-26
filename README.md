@@ -1,22 +1,26 @@
 
 # API para la creación y uso de Modelos de Aprendizaje Supervisado para el TIF
 
-### Creación del directorio
-mkdir tif_api
-
-cd tif_api
-
-### Si no se encuentra instalado Python aún
+### Instalación de Python
 #### Actualizar primero la lista de paquetes disponibles en los repositorios del sistema
 sudo apt update
-#### Instalar Python
+#### Instalar la versión 3 de Python
 sudo apt install python3
 #### Verificar si se ha instalado y su versión
-python -V
+python3 -V
+# ó
+python3 --version
 
-python --version
+### Creación del directorio de la API
+El directorio de la API del proyecto TIF deberá ubicarse en /var/www/html/tif_api/
+
+cd /var/www/html/
+mkdir tif_api
+cd tif_api
 
 ### Creación del entorno virtual
+sudo apt install python3.12-venv
+
 python3 -m venv venv
 
 Esto creará una carpeta venv/ dentro del proyecto con una instalación aislada de Python.
@@ -29,7 +33,7 @@ source venv/bin/activate
 Se verá en la terminal: (venv) (base) thor@thor-desktop:/var/www/html/tif_api$
 
 ### Instalar las dependencias necesarias
-Es recomendable contar con un archivo de texto, requirements.txt, que contenga el nombre de todas las dependencias que el proyecto requiere. las cuales son: fastapi, uvicorn, scikit-learn, pandas, mysql-connector-python, joblib
+Es recomendable contar con un archivo de texto, requirements.txt, que contenga el nombre de todas las dependencias que el proyecto requiere. las cuales son: fastapi, uvicorn, scikit-learn, pandas, mysql-connector-python, pymysql, joblib, sqlalchemy, cryptography
 
 Para instalarlas se debe ejecutar:
 
@@ -39,45 +43,42 @@ pip es un sistema de gestión de paquetes, Python 3 ya lo incluye.
 
 La bandera -r permite leer e instalar paquetes desde el archivo requirements.txt
 
-### Iniciar el servidor para verificar la instalación
-uvicorn main:app --reload
-
 ### Crear el directorio donde se guardarán los modelos entrenados
 mkdir modelos
 
-### Resultado de la estructura del proyecto, con los diferentes archivos necesarios para el proyecto del Modelo de AAS del TIF:
+### Estructura del proyecto de la API
+Con los archivos necesarios para la creación, entrenamiento y uso de Modelos de Aprendizaje Automático Supervisado.
+
 tif_api/
-
-├── venv/                  # entorno virtual
-
-├── main.py                # API con diversos endpoints para la utilización de los modelos, para su desarrollo se utilizó FastAPI
-
-├── db.py                  # Método que retorna la conexión a la base de datos MySQL del TIF
-
-├── model_utils.py         # Métodos para crear, entrenar y usar diferentes modelos, para realizar predicciones.
-
 ├── modelos/
+└──------ modelo_consumo_mp.pkl       # Regresión con Bosques Aleatorios.
+└──------ modelo_demanda.pkl          # Regresión con Bosques Aleatorios.
+└──------ modelo_lineal_ventas.pkl    # Modelo de Regresión Lineal Múltiple (3 variables independientes).
+└──------ modelo_lineal_ventas_v2.pkl # Modelo de Regresión Lineal Múltiple (2 variables independientes).
+├── venv/  # Directorio del entorno virtual.
+├── db.py  # Se obtiene un pool de conexiones a la base de datos.
+├── entrenar_modelo_consumo_mp.py  # Se crea y entrena el modelo de compras.
+├── entrenar_modelos_venta_v2.py      # Se crea y entrena el modelo de ventas.
+├── entrenar_modelos_venta.py      # Se crea y entrena el modelo de ventas.
+├── main.py # Se define la API para la utilización de los modelos.
+├── monitoreo.py # Se obtienen datos para las gráficas de Monitoreo.
+├── predecir_consumo_mp.py # Se utiliza el modelo de compras para predecir la demanda de materias primas.
+├── predecir_demanda_mensual_mp.py # Se utiliza el modelo de compras para predecir la demanda mensual de materias primas.
+├── predicciones_ventas.py # Se utiliza el modelo de ventas para realizar diversas predicciones.
+└── requirements.txt # Contiene las dependencias del proyecto para la API.
 
---└── modelo.pkl                     # Archivo que contiene el modelo guardado de Regresión Lineal
-
---└── modelo_logistica.pkl           # Archivo que contiene el modelo guardado de Regresión Logística
-
---└── modelo_con_arbol.pkl           # Archivo que contiene el modelo guardado de Arbol de Decisión
-
---└── modelo_con_bosque.pkl          # Archivo que contiene el modelo guardado de Bosques Aleatorios
-
-└── requirements.txt       # dependencias del proyecto para el modelo
-
-## Importante, al iniciar la API
-### Primero se debe activar el entorno virtual
+## Iniciar la API para su uso
+### Activar el entorno virtual
 source venv/bin/activate
 
 Se verá en la terminal: (venv) (base) thor@thor-desktop:/var/www/html/tif_api$
 
-### Luego iniciar el servidor, se utiliza --reload para que tome los cambios en la API
+### Iniciar el servidor de la API
 uvicorn main:app --reload
 
-### Acceso a la documentación interactiva generada por FastAPI:
-http://127.0.0.1:8000/docs     ← Swagger UI
+(Se utiliza --reload para que tome los cambios en la API)
 
-http://127.0.0.1:8000/redoc    ← ReDoc
+### Acceso a la documentación interactiva generada por FastAPI:
+Swagger UI: http://127.0.0.1:8000/docs
+
+ReDoc: http://127.0.0.1:8000/redoc
