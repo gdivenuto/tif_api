@@ -7,8 +7,6 @@ sudo apt update
 #### Instalar la versión 3 de Python
 sudo apt install python3
 #### Verificar si se ha instalado y su versión
-python3 -V
-# ó
 python3 --version
 
 ### Creación del directorio de la API
@@ -49,23 +47,24 @@ mkdir modelos
 ### Estructura del proyecto de la API
 Con los archivos necesarios para la creación, entrenamiento y uso de Modelos de Aprendizaje Automático Supervisado.
 
+```bash
 tif_api/
 ├── modelos/
-└──------ modelo_consumo_mp.pkl       # Regresión con Bosques Aleatorios.
-└──------ modelo_demanda.pkl          # Regresión con Bosques Aleatorios.
-└──------ modelo_lineal_ventas.pkl    # Modelo de Regresión Lineal Múltiple (3 variables independientes).
-└──------ modelo_lineal_ventas_v2.pkl # Modelo de Regresión Lineal Múltiple (2 variables independientes).
-├── venv/  # Directorio del entorno virtual.
-├── db.py  # Se obtiene un pool de conexiones a la base de datos.
-├── entrenar_modelo_consumo_mp.py  # Se crea y entrena el modelo de compras.
-├── entrenar_modelos_venta_v2.py      # Se crea y entrena el modelo de ventas.
-├── entrenar_modelos_venta.py      # Se crea y entrena el modelo de ventas.
-├── main.py # Se define la API para la utilización de los modelos.
-├── monitoreo.py # Se obtienen datos para las gráficas de Monitoreo.
-├── predecir_consumo_mp.py # Se utiliza el modelo de compras para predecir la demanda de materias primas.
-├── predecir_demanda_mensual_mp.py # Se utiliza el modelo de compras para predecir la demanda mensual de materias primas.
-├── predicciones_ventas.py # Se utiliza el modelo de ventas para realizar diversas predicciones.
-└── requirements.txt # Contiene las dependencias del proyecto para la API.
+│   ├── modelo_consumo_mp.pkl       # Regresión con Bosques Aleatorios.
+│   ├── modelo_demanda.pkl          # Regresión con Bosques Aleatorios.
+│   ├── modelo_lineal_ventas.pkl    # Modelo de Regresión Lineal Múltiple (3 variables independientes).
+│   └── modelo_lineal_ventas_v2.pkl # Modelo de Regresión Lineal Múltiple (2 variables independientes).
+├── venv/                           # Directorio del entorno virtual.
+├── db.py                           # Se obtiene un pool de conexiones a la base de datos.
+├── entrenar_modelo_consumo_mp.py   # Se crea y entrena el modelo de compras.
+├── entrenar_modelos_venta_v2.py    # Se crea y entrena el modelo de ventas.
+├── entrenar_modelos_venta.py       # Se crea y entrena el modelo de ventas.
+├── main.py                         # Se define la API para la utilización de los modelos.
+├── monitoreo.py                    # Se obtienen datos para las gráficas de Monitoreo.
+├── predecir_consumo_mp.py          # Se utiliza el modelo de compras para predecir la demanda de materias primas.
+├── predecir_demanda_mensual_mp.py  # Se utiliza el modelo de compras para predecir la demanda mensual de materias primas.
+├── predicciones_ventas.py          # Se utiliza el modelo de ventas para realizar diversas predicciones.
+└── requirements.txt                # Contiene las dependencias del proyecto para la API.
 
 ## Iniciar la API para su uso
 ### Activar el entorno virtual
