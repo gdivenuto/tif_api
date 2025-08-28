@@ -3,9 +3,9 @@ from sqlalchemy.engine import Engine
 
 # Parámetros de conexión
 HOST     = "localhost"
-USER     = "root"
-PASSWORD = "gabilan"
-DBNAME   = "uaa_tif"
+USER     = "###" # TU USUARIO
+PASSWORD = "###" # TU PASSWORD
+DBNAME   = "###" # TU NOMBRE DE BASE DE DATOS
 
 # URL de SQLAlchemy
 DATABASE_URL = f"mysql+pymysql://{USER}:{PASSWORD}@{HOST}/{DBNAME}"
